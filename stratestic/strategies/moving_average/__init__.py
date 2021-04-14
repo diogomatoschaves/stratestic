@@ -1,0 +1,3 @@
+from stratestic.strategies.moving_average.ma import MovingAverage
+from stratestic.strategies.moving_average.ma_crossover import MovingAverageCrossover
+from stratestic.strategies.moving_average.macd import MovingAverageConvergenceDivergence

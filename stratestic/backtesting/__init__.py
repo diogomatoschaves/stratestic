@@ -1,0 +1,2 @@
+from stratestic.backtesting.vectorized import VectorizedBacktester
+from stratestic.backtesting.iterative import IterativeBacktester
