@@ -3,4 +3,3 @@ from stratestic.strategies.moving_average import MovingAverageConvergenceDiverge
 from stratestic.strategies.moving_average import MovingAverageCrossover
 from stratestic.strategies.moving_average import MovingAverage
 from stratestic.strategies.mean_reversion import BollingerBands
-from stratestic.strategies.machine_learning import MachineLearning
