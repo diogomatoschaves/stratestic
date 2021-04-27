@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "quant_model"
+name = "stratestic"
 version = "0.1.0"
-description = "Quant Model Service. Loads data from database and calculates signals. Trains machine learning models. Provides backtesting tools."
+description = "Library for testing and analysing trading strategies."
 authors = ["Diogo Matos Chaves <diogo_chaves@hotmail.com>"]
 
 [tool.poetry.dependencies]
