@@ -1,5 +1,3 @@
-from stratestic.strategies.trend import Momentum
-from stratestic.strategies.moving_average import MovingAverageConvergenceDivergence
-from stratestic.strategies.moving_average import MovingAverageCrossover
-from stratestic.strategies.moving_average import MovingAverage
+from stratestic.strategies.moving_average import MovingAverage, MovingAverageCrossover, MovingAverageConvergenceDivergence
 from stratestic.strategies.mean_reversion import BollingerBands
+from stratestic.strategies.trend import Momentum
