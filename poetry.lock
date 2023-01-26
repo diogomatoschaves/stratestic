@@ -757,6 +757,20 @@ files = [
 six = ">=1.5"
 
 [[package]]
+name = "python-dotenv"
+version = "0.17.1"
+description = "Read key-value pairs from a .env file and set them as environment variables"
+optional = false
+python-versions = "*"
+files = [
+    {file = "python-dotenv-0.17.1.tar.gz", hash = "sha256:b1ae5e9643d5ed987fc57cc2583021e38db531946518130777734f9589b3141f"},
+    {file = "python_dotenv-0.17.1-py2.py3-none-any.whl", hash = "sha256:00aa34e92d992e9f8383730816359647f358f4a3be1ba45e5a5cefd27ee91544"},
+]
+
+[package.extras]
+cli = ["click (>=5.0)"]
+
+[[package]]
 name = "pytz"
 version = "2023.3.post1"
 description = "World timezone definitions, modern and historical"
@@ -876,4 +890,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.8"
-content-hash = "a997aa6d86585898cb3ddb0aa9bc6832a59dc4187523214bb76b4a75c1fb8db9"
+content-hash = "a9ae3947afd6e89b9fd2321c95cec2dbdc69f2d82456fb4b0ac61db68dfea930"
