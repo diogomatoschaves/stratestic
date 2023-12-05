@@ -79,7 +79,7 @@ System Quality Number: -0.02
 ```
 
 <p align="left">
-  <img src="shared/utils/drawings/vectorized_results.png" style="width: 100%" />
+  <img src="stratestic/utils/drawings/vectorized_results.png" style="width: 100%" />
 </p>
 
 ### Iterative Backtesting
@@ -133,7 +133,7 @@ Expectancy [%]: 1.7
 System Quality Number: 0.17
 ```
 <p align="left">
-  <img src="shared/utils/drawings/iterative_results.png" style="width: 100%" />
+  <img src="stratestic/utils/drawings/iterative_results.png" style="width: 100%" />
 </p>
 
 ### Optimization
@@ -142,8 +142,8 @@ You can use the optimization API of either the iterative or vectorized backteste
 of parameters for a backtest. Below is an example of how to achive this.
 
 ```python
-from model.backtesting import VectorizedBacktester
-from model.strategies import Momentum
+from stratestic.backtesting import VectorizedBacktester
+from stratestic.strategies import Momentum
 
 symbol = "BTCUSDT"
 trading_costs = 0.1
@@ -165,7 +165,7 @@ vect.optimize(dict(window=(40, 90))) # Pass as an argument a dictionary with the
 This will output the best parameters and show the corresponding results.
 
 <p align="left">
-  <img src="shared/utils/drawings/optimization_results.png" style="width: 100%" />
+  <img src="stratestic/utils/drawings/optimization_results.png" style="width: 100%" />
 </p>
 
 
@@ -204,7 +204,7 @@ class MyStrategy(StrategyMixin):
         Initializes the strategy object.
     update_data(self)
         Retrieves and prepares the data.
-    _calculate_positions(self, data)
+    calculate_positions(self, data)
         Calculates positions based on strategy rules.
     get_signal(self, row=None)
         Returns signal based on current data.
@@ -252,7 +252,7 @@ class MyStrategy(StrategyMixin):
         
         return data
 
-    def _calculate_positions(self, data):
+    def calculate_positions(self, data):
         """
         Calculates positions based on strategy rules.
 
@@ -306,7 +306,7 @@ call StrategyMixin.__init__(self, data, **kwargs) to initialize the parent class
 will depend on the data source you are using. It is advised to check the provided strategies 
 to see how this would be done.
 
-`_calculate_positions()` should contain code to calculate the positions for your strategy based 
+`calculate_positions()` should contain code to calculate the positions for your strategy based 
 on the current data. This is where you input the logic of your strategy in a vectorized way. 
 Note that this may not be possible, depending on your strategy, If that's the case, this method can 
 be ignored.
