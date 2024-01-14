@@ -158,7 +158,7 @@ class TestIterativeBacktester:
                     "strategies": [Momentum(2), MovingAverage(2)],
                     "method": "Unanimous"
                 },
-                [{"window": (2, 4, 1)}, {"ma": (1, 3, 1)}],
+                [{"window": (2, 4)}, {"ma": (1, 3)}],
                 [{'window': 3.0}, {'ma': 2.0}],
                 id='2_strategies-unanimous'
             ),
@@ -167,7 +167,7 @@ class TestIterativeBacktester:
                     "strategies": [Momentum(2), MovingAverage(2)],
                     "method": "Majority"
                 },
-                [{"window": (2, 4, 1)}, {"ma": (1, 3, 1)}],
+                [{"window": (2, 4)}, {"ma": (1, 3)}],
                 [{'window': 3.0}, {'ma': 1.0}],
                 id='2_strategies-majority'
             ),
@@ -176,7 +176,7 @@ class TestIterativeBacktester:
                     "strategies": [Momentum(2), MovingAverage(2), BollingerBands(3, 1)],
                     "method": "Majority"
                 },
-                [{"window": (2, 4, 1)}, {"ma": (1, 3, 1)}, {}],
+                [{"window": (2, 4)}, {"ma": (1, 3)}, {}],
                 [{'window': 3.0}, {'ma': 1.0}, {'ma': 3.0, 'sd': 1.0}],
                 id='3_strategies-majority'
             ),
@@ -185,7 +185,7 @@ class TestIterativeBacktester:
                     "strategies": [MovingAverageCrossover(2, 5)],
                     "method": "Unanimous"
                 },
-                [{"sma_s": (2, 4, 1), "sma_l": (4, 6, 1)}],
+                [{"sma_s": (2, 4), "sma_l": (4, 6)}],
                 [{'sma_s': 3.0, 'sma_l': 4.0}],
                 id='1_strategies-unanimous'
             ),
@@ -216,7 +216,7 @@ class TestIterativeBacktester:
                     "strategies": [Momentum(2), MovingAverage(2)],
                     "method": "Unanimous"
                 },
-                [{"window": (2, 4, 1)}, {"ma": (1, 3, 1)}],
+                [{"window": (2, 4)}, {"ma": (1, 3)}],
                 id='2_strategies-unanimous'
             ),
             pytest.param(
@@ -224,7 +224,7 @@ class TestIterativeBacktester:
                     "strategies": [Momentum(2), MovingAverage(2)],
                     "method": "Majority"
                 },
-                [{"window": (2, 4, 1)}, {"ma": (1, 3, 1)}],
+                [{"window": (2, 4)}, {"ma": (1, 3)}],
                 id='2_strategies-majority'
             ),
         ],
@@ -258,7 +258,7 @@ class TestIterativeBacktester:
                     "strategies": [Momentum(2), MovingAverage(2)],
                     "method": "Unanimous"
                 },
-                [{"window": (2, 4, 1)}, {"ma": (1, 3, 1)}],
+                [{"window": (2, 4)}, {"ma": (1, 3)}],
                 id='2_strategies-unanimous'
             ),
             pytest.param(
@@ -266,7 +266,7 @@ class TestIterativeBacktester:
                     "strategies": [Momentum(2), MovingAverage(2)],
                     "method": "Majority"
                 },
-                [{"window": (2, 4, 1)}, {"ma": (1, 3, 1)}],
+                [{"window": (2, 4)}, {"ma": (1, 3)}],
                 id='2_strategies-majority'
             ),
         ],
