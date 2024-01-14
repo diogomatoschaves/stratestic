@@ -262,6 +262,9 @@ class IterativeBacktester(BacktestMixin, Trader):
 
         mark_price = self._get_high_low_price(current_trade.side, row)
 
+        if current_trade.side == -1:
+            a = 1
+
         margin_ratio = calculate_margin_ratio(
             self.leverage,
             current_trade.units,
@@ -292,6 +295,7 @@ class IterativeBacktester(BacktestMixin, Trader):
 
             processed_data["margin_ratios"] = np.where(processed_data["margin_ratios"] > 1, 1, processed_data["margin_ratios"])
             processed_data["margin_ratios"] = np.where(processed_data["margin_ratios"] < 0, 1, processed_data["margin_ratios"])
+            processed_data["margin_ratios"] = np.where(processed_data["side"] == 0, 0, processed_data["margin_ratios"])
 
         processed_data.dropna(inplace=True)
 
