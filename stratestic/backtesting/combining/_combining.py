@@ -1,5 +1,7 @@
+import os
 from typing import Literal
 
+import django
 import numpy as np
 import pandas as pd
 
@@ -7,8 +9,6 @@ from stratestic.strategies._mixin import StrategyMixin
 from stratestic.strategies.properties import STRATEGIES
 from stratestic.utils.exceptions import StrategyInvalid, StrategyRequired, OptimizationParametersInvalid
 
-
-possible_methods = ["Unanimous", "Majority"]
 
 
 class StrategyCombiner(StrategyMixin):
@@ -133,8 +133,8 @@ class StrategyCombiner(StrategyMixin):
             if strategy.__class__.__name__ not in STRATEGIES:
                 raise StrategyInvalid(strategy.__class__.__name__)
 
-        if method not in possible_methods:
-            raise Exception(f"'method' must be one of {possible_methods}")
+        if method not in strategy_combination_methods:
+            raise Exception(f"'method' must be one of {strategy_combination_methods}")
 
     def get_params(self, **kwargs):
         """
