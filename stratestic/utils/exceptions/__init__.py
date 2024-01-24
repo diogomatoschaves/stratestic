@@ -3,3 +3,4 @@ from stratestic.utils.exceptions.no_such_pipeline import NoSuchPipeline
 from stratestic.utils.exceptions.optimization_parameters_invalid import OptimizationParametersInvalid
 from stratestic.utils.exceptions.strategy_invalid import StrategyInvalid
 from stratestic.utils.exceptions.strategy_required import StrategyRequired
+from stratestic.utils.exceptions.leverage_invalid import LeverageInvalid

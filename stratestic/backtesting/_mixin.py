@@ -8,7 +8,7 @@ from stratestic.backtesting.helpers.metrics import *
 from stratestic.backtesting.helpers.results_constants import results_mapping, results_aesthetics
 from stratestic.backtesting.plotting import plot_backtest_results
 from stratestic.utils.config_parser import get_config
-from stratestic.utils.exceptions import StrategyRequired, OptimizationParametersInvalid, SymbolInvalid
+from stratestic.utils.exceptions import StrategyRequired, OptimizationParametersInvalid, SymbolInvalid, leverage_invalid
 
 config_vars = get_config('general')
 
@@ -65,7 +65,8 @@ class BacktestMixin:
         """
         self.include_margin = include_margin
         self.exchange = exchange
-        self.leverage = leverage
+
+        self.set_leverage(leverage)
 
         self.amount = amount
         self.symbol = symbol
@@ -111,6 +112,12 @@ class BacktestMixin:
                        f"<b>Leverage</b> = {self.leverage}")
         return extra_title + '<br>' + self.strategy.__repr__()
 
+    def set_leverage(self, leverage):
+        if isinstance(leverage, int) and 1 <= leverage <= 125:
+            self.leverage = leverage
+        else:
+            raise LeverageInvalid(leverage)
+
     def load_data(self, data=None, csv_path=None):
         if data is None or csv_path:
             csv_path = csv_path if csv_path else config_vars.ohlc_data_file
@@ -138,7 +145,7 @@ class BacktestMixin:
         None
         """
         if leverage is not None:
-            self.leverage = leverage
+            self.set_leverage(leverage)
 
         perf, outperf, results = self._test_strategy(print_results=print_results, plot_results=plot_results)
 
