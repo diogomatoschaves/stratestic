@@ -26,7 +26,7 @@ class TestIterativeBacktester:
             for fixture_name, fixture in fixtures.items()
         ],
     )
-    def test_run(self, fixture, mocked_matplotlib_show):
+    def test_run(self, fixture, mocked_plotly_figure_show):
 
         strategy = fixture["in"]["strategy"]
         params = fixture["in"]["params"]
@@ -55,7 +55,7 @@ class TestIterativeBacktester:
             for fixture_name, fixture in fixtures.items()
         ],
     )
-    def test_results_equal_to_vectorized(self, fixture, mocked_matplotlib_show):
+    def test_results_equal_to_vectorized(self, fixture, mocked_plotly_figure_show):
         strategy = fixture["in"]["strategy"]
         params = fixture["in"]["params"]
         trading_costs = fixture["in"]["trading_costs"]

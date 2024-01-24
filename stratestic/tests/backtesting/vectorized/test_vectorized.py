@@ -5,7 +5,7 @@ import pytest
 import pandas as pd
 
 from stratestic.backtesting import VectorizedBacktester, IterativeBacktester
-from stratestic.tests.setup.fixtures.external_modules import mocked_matplotlib_show
+from stratestic.tests.setup.fixtures.external_modules import mocked_plotly_figure_show
 from stratestic.tests.setup.test_data.sample_data import data
 from stratestic.utils.test_setup import get_fixtures
 
@@ -25,7 +25,7 @@ class TestVectorizedBacktester:
             for fixture_name, fixture in fixtures.items()
         ],
     )
-    def test_run(self, fixture, mocked_matplotlib_show):
+    def test_run(self, fixture, mocked_plotly_figure_show):
 
         strategy = fixture["in"]["strategy"]
         params = fixture["in"]["params"]
@@ -54,7 +54,7 @@ class TestVectorizedBacktester:
             for fixture_name, fixture in fixtures.items()
         ],
     )
-    def test_optimize_parameters(self, fixture, mocked_matplotlib_show):
+    def test_optimize_parameters(self, fixture, mocked_plotly_figure_show):
 
         strategy = fixture["in"]["strategy"]
         params = fixture["in"]["params"]
@@ -82,7 +82,7 @@ class TestVectorizedBacktester:
             for fixture_name, fixture in fixtures.items()
         ],
     )
-    def test_results_equal_to_vectorized(self, fixture, mocked_matplotlib_show):
+    def test_results_equal_to_vectorized(self, fixture, mocked_plotly_figure_show):
         strategy = fixture["in"]["strategy"]
         params = fixture["in"]["params"]
         trading_costs = fixture["in"]["trading_costs"]
