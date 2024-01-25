@@ -1,7 +1,7 @@
 class NoConfigFile(Exception):
     def __init__(self, *args):
 
-        self.message = "A config file is required"
+        self.message = "A config file is required."
 
     def __str__(self):
         return f"{self.message}"
