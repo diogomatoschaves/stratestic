@@ -1,5 +1,7 @@
 # Stratestic
 
+[![codecov](https://codecov.io/gh/diogomatoschaves/stratestic/graph/badge.svg?token=4E2B0ZOH1K)](https://codecov.io/gh/diogomatoschaves/stratestic)
+
 The `stratestic` module is a Python package that provides a framework for backtesting trading
 strategies. It contains a collection of pre-implemented trading strategies, as well as
 tools for analyzing and visualizing the performance of these strategies.
