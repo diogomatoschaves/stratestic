@@ -1,41 +1,43 @@
-# Stratestic
+# Stratestic  📈📊🛠️
 
 [![codecov](https://codecov.io/gh/diogomatoschaves/stratestic/graph/badge.svg?token=4E2B0ZOH1K)](https://codecov.io/gh/diogomatoschaves/stratestic)
 ![tests_badge](https://github.com/diogomatoschaves/stratestic/actions/workflows/run-tests.yml/badge.svg)
 [![PyPI version](https://badge.fury.io/py/stratestic.svg)](https://badge.fury.io/py/stratestic)
 
 
-The `stratestic` module is a Python package that provides a framework for backtesting trading
-strategies. It contains a collection of pre-implemented trading strategies, as well as
-tools for analyzing and visualizing the performance of these strategies.
+The `stratestic` module is a Python package for backtesting, analysing and optimizing trading strategies. 
+It includes pre-implemented strategies, but it is also possible to create new strategies or even to combine them.
 
-To use this module, users can simply import the package and select one of the pre-implemented
-strategies to backtest. Alternatively, users can create their own custom strategies by extending
-the existing classes and implementing their own methods.
+The basic usage is as simple as importing a backtesting class, a strategy and run the backtest. The backtest can 
+then be refined with optimizations or by incorporating leverage.  
 
-This module provides a convenient and flexible way for users to explore and experiment
-with different trading strategies, and to evaluate their performance under different market
-conditions. By providing a standardized interface for defining and testing trading strategies,
-the `stratestic` library makes it easy for users to compare and evaluate different approaches to trading,
-and to gain insights into the factors that contribute to successful trading.
+Overall it offers a powerful way to explore and experiment with different strategies, 
+and to evaluate the performance under different conditions.
 
-Overall, `stratestic` is a powerful tool for anyone interested in developing, testing,
-and refining trading strategies, whether for personal use or for professional trading applications.
+## Installation
 
-## Backtesting
+    $ pip install stratestic
 
-This module offers 2 types of Backtesting - Vectorized and Iterative. Below they are described in more detail
-and examples are given. It is also shown how to use the optimization API in order to fine tune the strategies and 
-find the best parameters.
+## Usage
 
+1. [ Vectorized Backtesting ](#vectorized-backtesting)
+2. [ Iterative Backtesting ](#iterative-backtesting)
+3. [ Backtesting with leverage and margin ](#leverage) <br>
+    3.1. [ Calculating the maximum allowed leverage ](#maximum-leverage)
+4. [ Optimization ](#optimization)
+5. [ Strategies ](#strategies) <br>
+    5.1. [ Combined strategies](#combined-strategies) <br>
+    5.2. [ Create new strategies](#new-strategies)
+
+<a name="vectorized-backtesting"></a>
 ### Vectorized Backtesting
 
-Thee `VectorizedBacktester` class is a backtesting framework that allows you to test trading strategies
+The `VectorizedBacktester` is a backtesting class that allows you to test trading strategies
 on historical price data. It has the advantage of being faster than the iterative backtesting, but at
 a cost of flexibility, as it will be hard or outright not possible to accomplish this for some more 
 complex strategies. For all the strategies provided by this library, vectorized backtesting is supported.
 
-Below is an example of how to use it for the `MovingAverageConvergenceDivergence` strategy:
+Below is an example of how to use it for the `MovingAverageCrossover` strategy:
 
 ```python
 from stratestic.backtesting import VectorizedBacktester
@@ -46,9 +48,14 @@ trading_costs = 0.1 # This should be in percentage, i.e. 0.1%
 
 mov_avg = MovingAverageCrossover(50, 200)
 
-vect = VectorizedBacktester(mov_avg, symbol, amount=1000, trading_costs=trading_costs) # Initializes the IterativeBacktester class with the strategy.
-vect.load_data() # Load the default sample data. You can pass your own DataFrame to 'load_data'
-vect.run() # Runs the backtest and shows the results
+vect = VectorizedBacktester(  # Initializes the VectorizedBacktester class with the strategy.
+    mov_avg,
+    symbol,
+    amount=1000,
+    trading_costs=trading_costs
+)
+vect.load_data()  # Load the default sample data. You can pass your own DataFrame to 'load_data'
+vect.run()  # Runs the backtest and shows the results
 ```
 
 This will output the results in textual and graphical form.
@@ -110,12 +117,14 @@ System Quality Number                        -0.02
   <img src="stratestic/utils/drawings/vectorized_results.png" style="width: 100%" />
 </p>
 
+<a name="iterative-backtesting"></a>
 ### Iterative Backtesting
 
-The `IterativeBacktester` class is a backtesting framework that allows you to test trading strategies
+The `IterativeBacktester` is a backtesting class that allows you to test trading strategies
 on historical price data. It works by iterating through each historical data point and simulating
-trades based on your strategy. Below is an example of how you would backtest the `MovingAverageCrossover`
-strategy. 
+trades based on your strategy. This feature allows for a greater degree of flexibility, 
+allowing you to add more complex logic to the strategies. Below is an example of how you would use this 
+class to backtest the `MovingAverageConvergenceDivergence` strategy. 
 
 ```python
 from stratestic.backtesting import IterativeBacktester
@@ -125,7 +134,7 @@ symbol = "BTCUSDT"
 
 macd = MovingAverageConvergenceDivergence(26, 12, 9)
 
-ite = IterativeBacktester(macd, symbol=symbol) # Initializes the VectorizedBacktester class with the strategy
+ite = IterativeBacktester(macd, symbol=symbol) # Initializes the IterativeBacktester class with the strategy
 ite.load_data() # Load the default sample data. You can pass your own DataFrame to load_data
 ite.run() # Runs the backtest and shows the results
 ```
@@ -187,13 +196,13 @@ System Quality Number                         0.16
   <img src="stratestic/utils/drawings/iterative_results.png" style="width: 100%" />
 </p>
 
-### Backtesting with Leverage and Margin
+<a name="leverage"></a>
+### Backtesting with leverage and margin
 
 Both the Vectorized and Iterative backtesting classes provide users with the ability to incorporate leverage into a 
-backtest and visualize the margin ratio as a curve on the results plot. This feature enables users to identify 
+backtest and visualize the margin ratio evolution during the backtest. This feature enables users to identify 
 instances where a margin call would occur, leading to a potential loss of all funds. The calculations follow the 
-rules outlined by Binance, as detailed [here](https://www.binance.com/en/support/faq/how-to-calculate-liquidation-price-of-usd%E2%93%A2-m-futures-contracts-b3c689c1f50a44cabb3a84e663b81d93)
-and [here](https://www.binance.com/en/support/faq/leverage-and-margin-of-usd%E2%93%A2-m-futures-360033162192). 
+rules outlined by Binance, as detailed [here](https://www.binance.com/en/support/faq/how-to-calculate-liquidation-price-of-usd%E2%93%A2-m-futures-contracts-b3c689c1f50a44cabb3a84e663b81d93) and [here](https://www.binance.com/en/support/faq/leverage-and-margin-of-usd%E2%93%A2-m-futures-360033162192). 
 It's important to note that these calculations assume the selected margin is _Isolated_, and the position mode
 is _One Way_. To utilize this functionality, follow these steps:
 
@@ -279,9 +288,10 @@ System Quality Number                         0.33
 
 As evident from the results, employing a leverage of `8` led to 3 margin calls during the backtest, 
 showing that this particular strategy would have implied a total loss of the funds, unless more margin was
-added to the positions. 
+added to the positions in the meantime. 
 
-#### Calculation the Maximum Allowed Leverage
+<a name="maximum-leverage"></a>
+#### Calculating the maximum allowed leverage
 
 The backtesting class also offers an API to determine the maximum permissible leverage for a backtest, 
 ensuring that the margin ratio remains below a specified threshold. This can be accomplished by following the 
@@ -315,6 +325,7 @@ Which will output the maximum leverage without a margin call. In the example, it
 Out[2]: 5
 ```
 
+<a name="optimization"></a>
 ### Optimization
 
 You can use the optimization API of either the iterative or vectorized backtester in order to find the best combination 
@@ -348,13 +359,15 @@ This will output the best parameters and show the corresponding results.
 </p>
 
 
-## Strategies
+<a name="strategies"></a>
+### Strategies
 
-### Combined Strategies
+<a name="combined-strategies"></a>
+#### Combined strategies
 
 It is possible to combine 2 or more strategies into one, by means of the `StrategyCombiner` class. The options
 for combining the strategies are `Unanimous` or `Majority`. The `Unaninmous` option signals a buy or a sell
-if the individual strategy signals all agree (unanimous), whereas the `Majority` method provides a buy a 
+if all the individual strategy signals agree (unanimous), whereas the `Majority` method provides a buy a 
 or sell signal if the majority of the individual strategy signals points in one direction. 
 
 Here's an example of how that could be achieved:
@@ -405,8 +418,8 @@ vect.load_data() # Load the default sample data. You can pass your own DataFrame
 vect.optimize([dict(sma_s=(20, 40)), dict(window=(60, 80))])
 ```
 
-
-### Develop a new strategy
+<a name="new-strategies"></a>
+#### Create new strategies
 
 This module comes with some default strategies ready to be used, but chances are you will want
 to expand this and create your own strategies. This can be easily achieved by using the template class below, 
@@ -548,4 +561,4 @@ be ignored.
 
 `get_signal()` should contain code to generate the signal for a given row of data. The signal 
 should be an integer, where -1 represents a short position, 1 represents a long position, 
-and 0 represents a neutrral position.
+and 0 represents a neutral position.
