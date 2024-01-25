@@ -3,7 +3,7 @@ import sys
 from collections import namedtuple
 from configparser import RawConfigParser
 
-from stratestic.utils.exceptions.no_config_file import NoConfigFile
+from stratestic.utils.exceptions import NoConfigFile
 
 try:
     directory_path = os.path.dirname(os.path.realpath(__file__))
@@ -18,19 +18,7 @@ def search_for_file(dirname, filename):
     if os.path.exists(filepath):
         return filepath
     else:
-        filepath = False
-        try:
-            for name in os.listdir(dirname):
-                path = os.path.join(dirname, name)
-                if os.path.isdir(path):
-
-                    result = search_for_file(path, filename)
-
-                    filepath = result if result else filepath
-        except PermissionError:
-            pass
-
-    return filepath
+        raise NoConfigFile
 
 
 def get_config(app='', filename='proj.conf'):
@@ -40,9 +28,6 @@ def get_config(app='', filename='proj.conf'):
     for section in ['general', app]:
 
         filepath = search_for_file(os.path.abspath(''), filename)
-
-        if not filepath:
-            raise NoConfigFile
 
         fp = open(filepath)
         config = RawConfigParser()

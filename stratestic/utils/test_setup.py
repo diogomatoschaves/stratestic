@@ -29,10 +29,3 @@ def get_fixtures(current_path, fixtures=None, keys=None):
             fixtures[name][key] = variables
 
     return fixtures
-
-
-if __name__ == "__main__":
-
-    fixtures = get_fixtures("/data/tests/sources/binance/extract")
-
-    print(fixtures)
