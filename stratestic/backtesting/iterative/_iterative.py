@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 
 from stratestic.backtesting._mixin import BacktestMixin
@@ -222,9 +224,9 @@ class IterativeBacktester(BacktestMixin, Trader):
 
         # title printout
         if print_results:
-            print("-" * 70)
-            print(self._get_test_title())
-            print("-" * 70)
+            logging.info("-" * 70)
+            logging.info(self._get_test_title())
+            logging.info("-" * 70)
 
         if data.empty:
             return 0, 0, None
@@ -414,7 +416,7 @@ class IterativeBacktester(BacktestMixin, Trader):
         self._handle_trade(self.trades, open_trade, date, price_tc, units, self.current_balance, 1)
 
         if print_results:
-            print(f"{date} |  Buying {round(units, 4)} {self.symbol} for {round(price_tc, 5)}")
+            logging.info(f"{date} |  Buying {round(units, 4)} {self.symbol} for {round(price_tc, 5)}")
 
     def sell_instrument(
         self,
@@ -481,7 +483,7 @@ class IterativeBacktester(BacktestMixin, Trader):
         self._handle_trade(self.trades, open_trade, date, price_tc, units, amount, -1)
 
         if print_results:
-            print(f"{date} |  Selling {round(units, 4)} {self.symbol} for {round(price_tc, 5)}")
+            logging.info(f"{date} |  Selling {round(units, 4)} {self.symbol} for {round(price_tc, 5)}")
 
     def close_pos(self, symbol, date=None, row=None, header='', **kwargs):
         """
@@ -512,8 +514,8 @@ class IterativeBacktester(BacktestMixin, Trader):
         print_results = kwargs.get('print_results')
 
         if self.units != 0 and print_results:
-            print(70 * "-")
-            print("{} |  +++ CLOSING FINAL POSITION +++".format(date))
+            logging.info(70 * "-")
+            logging.info("{} |  +++ CLOSING FINAL POSITION +++".format(date))
 
         if self.units < 0:
             self.buy_instrument(symbol, date, row, open_trade=False, units=-self.units)
@@ -526,9 +528,9 @@ class IterativeBacktester(BacktestMixin, Trader):
 
             self.print_current_balance(date)
 
-            print("{} |  net performance (%) = {}".format(date, round(perf, 2)))
-            print("{} |  number of trades executed = {}".format(date, self.nr_trades))
-            print(70 * "-")
+            logging.info("{} |  net performance (%) = {}".format(date, round(perf, 2)))
+            logging.info("{} |  number of trades executed = {}".format(date, self.nr_trades))
+            logging.info(70 * "-")
 
     def _handle_trade(self, trades, open_trade, date, price, units, amount, side):
         if open_trade:

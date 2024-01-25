@@ -1,4 +1,5 @@
 import json
+import logging
 import math
 
 import progressbar
@@ -11,8 +12,11 @@ from stratestic.backtesting.helpers.results_constants import results_mapping, re
 from stratestic.backtesting.helpers.plotting import plot_backtest_results
 from stratestic.utils.config_parser import get_config
 from stratestic.utils.exceptions import StrategyRequired, OptimizationParametersInvalid, SymbolInvalid, LeverageInvalid
+from stratestic.utils.logger import configure_logger
 
 config_vars = get_config('general')
+
+configure_logger(config_vars.logger_level)
 
 pio.renderers.default = "browser"
 
@@ -284,7 +288,7 @@ class BacktestMixin:
             i += 1
             print('.', end='')
 
-        print()
+        logging.info('')
 
         self.set_leverage(initial_leverage)
         self.set_margin_threshold(initial_margin_threshold)
@@ -495,18 +499,17 @@ class BacktestMixin:
 
         length = 50
 
-        print()
+        logging.info("")
 
-        print('*' * length)
-        print('BACKTESTING RESULTS'.center(length))
-        print('*' * length)
-        print('')
+        logging.info('*' * length)
+        logging.info('BACKTESTING RESULTS'.center(length))
+        logging.info('*' * length)
+        logging.info('')
 
         for section, columns in results_sections.items():
 
-            # print('-' * length)
-            print(section.center(length))
-            print('-' * length)
+            logging.info(section.center(length))
+            logging.info('-' * length)
 
             for col in columns:
 
@@ -525,10 +528,10 @@ class BacktestMixin:
                     except TypeError:
                         value = str(value)
 
-                print(f'{printed_title:<25}{value.rjust(25)}')
-            print('-' * length)
-            print()
-        print('*' * length)
+                logging.info(f'{printed_title:<25}{value.rjust(25)}')
+            logging.info('-' * length)
+            logging.info('')
+        logging.info('*' * length)
 
     def _get_params_mapping(self, parameters, strategy_params_mapping):
         if not isinstance(self.strategy, StrategyCombiner):
