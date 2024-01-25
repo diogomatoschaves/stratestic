@@ -1,0 +1,34 @@
+# Your workflow name.
+name: tests
+
+# Run workflow on every push to master branch.
+on: [push, pull_request]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+      - name: Install and configure Poetry
+        uses: snok/install-poetry@v1.3.3
+        with:
+          version: 1.7.1
+          virtualenvs-create: false
+      - name: Install dependencies
+        run: |
+          poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi
+      - name: Test with pytest
+        run: |
+          python -m pytest --verbose --cov=stratestic --cov=tests --cov-report=xml
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
