@@ -56,8 +56,8 @@ class IterativeBacktester(BacktestMixin, Trader):
         >>> backtester = IterativeBacktester(strategy, symbol='BTCUSDT', amount=5000, trading_costs=0.01)
         """
 
-        BacktestMixin.__init__(self, symbol, amount, trading_costs, include_margin, leverage, margin_threshold)
         Trader.__init__(self, amount)
+        BacktestMixin.__init__(self, symbol, amount, trading_costs, include_margin, leverage, margin_threshold)
 
         self.strategy = strategy
 
