@@ -1,10 +1,7 @@
-from datetime import datetime, timedelta
-
 import pytest
 
-from stratestic.backtesting.helpers import Trade
 from stratestic.backtesting.helpers.metrics import *
-from stratestic.tests.setup.test_data.returns import cum_returns, returns
+from tests.setup.test_data.returns import cum_returns, returns
 
 
 @pytest.fixture

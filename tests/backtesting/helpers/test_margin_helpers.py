@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 
 from stratestic.backtesting.helpers.margin import get_maintenance_margin, calculate_margin_ratio, calculate_liquidation_price
-from stratestic.tests.setup.test_data.sample_data import binance_margin_brackets
+from tests.setup.test_data.sample_data import binance_margin_brackets
 
 
 @pytest.mark.parametrize(

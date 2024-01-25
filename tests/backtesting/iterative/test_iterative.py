@@ -7,10 +7,11 @@ import pytest
 from stratestic.backtesting import IterativeBacktester, VectorizedBacktester
 from stratestic.backtesting.combining import StrategyCombiner
 from stratestic.strategies import Momentum, MovingAverage, BollingerBands, MovingAverageCrossover
-from stratestic.tests.setup.fixtures.external_modules import mocked_plotly_figure_show
-from stratestic.tests.setup.test_data.sample_data import data
 from stratestic.utils.exceptions import OptimizationParametersInvalid
-from stratestic.utils.test_setup import get_fixtures
+from tests.setup.test_data.sample_data import data
+from tests.setup.test_setup import get_fixtures
+from tests.setup.fixtures.external_modules import mocked_plotly_figure_show
+
 
 current_path = os.path.dirname(os.path.realpath(__file__))
 

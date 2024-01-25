@@ -4,11 +4,11 @@ import pytest
 
 from stratestic.backtesting import VectorizedBacktester
 from stratestic.strategies import MovingAverage, Momentum, BollingerBands
-from stratestic.tests.setup.fixtures.external_modules import mocked_plotly_figure_show
-from stratestic.tests.setup.test_data.sample_data import data
 from stratestic.utils.exceptions import StrategyRequired, StrategyInvalid
-from stratestic.utils.test_setup import get_fixtures
 from stratestic.backtesting.combining import StrategyCombiner
+from tests.setup.test_data.sample_data import data
+from tests.setup.test_setup import get_fixtures
+from tests.setup.fixtures.external_modules import mocked_plotly_figure_show
 
 current_path = os.path.dirname(os.path.realpath(__file__))
 fixtures = get_fixtures(current_path)

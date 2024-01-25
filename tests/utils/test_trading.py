@@ -1,7 +1,7 @@
 import pytest
 
 from stratestic.trading import Trader
-from stratestic.tests.setup.fixtures.external_modules import spy_logging_info
+from tests.setup.fixtures.external_modules import spy_logging_info
 
 
 class TestTrader:
