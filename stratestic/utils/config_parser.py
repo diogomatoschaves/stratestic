@@ -21,7 +21,7 @@ def search_for_file(dirname, filename):
         raise NoConfigFile
 
 
-def get_config(app='', filename='proj.conf'):
+def get_config(app='', filename='stratestic/proj.conf'):
 
     config_vars = {}
 
