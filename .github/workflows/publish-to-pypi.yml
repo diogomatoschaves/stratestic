@@ -9,22 +9,24 @@ on:
 
 jobs:
   build:
-    name: Build stratestic distribution 📦
+    name: Build project distribution 📦
     runs-on: ubuntu-latest
+    env:
+      POETRY_VIRTUALENVS_CREATE: "false"
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: "3.8"
-    - name: Install pypa/build
-      run: >-
-        python3 -m
-        pip install
-        build
-        --user
-    - name: Build a binary wheel and a source tarball
-      run: python3 -m build
+    - name: Install poetry
+      run: |
+        pipx install poetry
+        poetry self add poetry-bumpversion
+    - name: Build
+      run: |
+        poetry version ${{ github.ref_name }}
+        poetry build
     - name: Store the distribution packages
       uses: actions/upload-artifact@v3
       with:
