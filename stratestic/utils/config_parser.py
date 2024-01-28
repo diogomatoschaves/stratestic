@@ -21,13 +21,13 @@ def search_for_file(dirname, filename):
         raise NoConfigFile
 
 
-def get_config(app='', filename='stratestic/proj.conf'):
+def get_config(app='', filename='proj.conf'):
 
     config_vars = {}
 
     for section in ['general', app]:
 
-        filepath = search_for_file(os.path.abspath(''), filename)
+        filepath = search_for_file(os.path.dirname(__file__), filename)
 
         fp = open(filepath)
         config = RawConfigParser()
