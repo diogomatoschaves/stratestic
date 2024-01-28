@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "stratestic"
-version = "0.1.1"
+version = "1.0.0"
 description = "Library for testing and analysing trading strategies."
 license = "MIT"
 authors = ["Diogo Matos Chaves <diogo_chaves@hotmail.com>"]
