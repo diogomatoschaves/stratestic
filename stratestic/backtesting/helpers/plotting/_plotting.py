@@ -3,7 +3,7 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
 
-from stratestic.backtesting.helpers.metrics import get_drawdowns, get_dd_durations_limits
+from stratestic.backtesting.helpers.evaluation.metrics import get_drawdowns, get_dd_durations_limits
 
 pio.renderers.default = "browser"
 

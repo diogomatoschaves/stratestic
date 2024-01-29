@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 import humanfriendly
 
 legend_mapping = {

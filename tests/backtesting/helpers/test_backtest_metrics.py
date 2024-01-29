@@ -1,6 +1,6 @@
 import pytest
 
-from stratestic.backtesting.helpers.metrics import *
+from stratestic.backtesting.helpers.evaluation.metrics import *
 from tests.setup.test_data.returns import cum_returns, returns
 
 

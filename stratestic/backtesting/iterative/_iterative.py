@@ -213,7 +213,7 @@ class IterativeBacktester(BacktestMixin, Trader):
         Returns
         -------
         dict
-            Dictionary containing the performance metrics of the backtest.
+            Dictionary containing the performance evaluation of the backtest.
 
         """
         super()._test_strategy(params, leverage)
