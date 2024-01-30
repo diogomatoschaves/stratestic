@@ -235,7 +235,7 @@ class IterativeBacktester(BacktestMixin, Trader):
 
         results, nr_trades, perf, outperf = self._evaluate_backtest(processed_data)
 
-        self._print_results(results, print_results)
+        self.print_results(results, print_results)
 
         self.plot_results(self.processed_data, plot_results, show_plot_no_tc=show_plot_no_tc)
 
@@ -321,11 +321,9 @@ class IterativeBacktester(BacktestMixin, Trader):
         if self.include_margin:
             processed_data["margin_ratios"] = self.margin_ratios
 
-            processed_data["margin_ratios"] = np.where(processed_data["margin_ratios"] > 1, 1, processed_data["margin_ratios"])
-            processed_data["margin_ratios"] = np.where(processed_data["margin_ratios"] < 0, 1, processed_data["margin_ratios"])
-            processed_data["margin_ratios"] = np.where(processed_data["side"] == 0, 0, processed_data["margin_ratios"])
+            processed_data = self._sanitize_margin_ratio(processed_data)
 
-        processed_data.dropna(inplace=True)
+            processed_data.dropna(inplace=True)
 
         self.processed_data = processed_data
 

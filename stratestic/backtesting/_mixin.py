@@ -370,6 +370,16 @@ class BacktestMixin:
             strategy_params, optimization_steps = self._get_optimization_input(params, self.strategy)
 
             return strategy_params, None, optimization_steps
+        
+    @staticmethod
+    def _sanitize_margin_ratio(df):
+        df["margin_ratios"] = np.where(df["margin_ratios"] > 1, 1, df["margin_ratios"])
+        df["margin_ratios"] = np.where(df["margin_ratios"] < 0, 1, df["margin_ratios"])
+        df["margin_ratios"] = np.where(df["side"] == 0, 0, df["margin_ratios"])
+
+        df["margin_ratios"] = df["margin_ratios"].fillna(0)
+
+        return df
 
     def _get_results(self, trades, processed_data):
         return get_results(
@@ -382,7 +392,7 @@ class BacktestMixin:
         )
 
     @staticmethod
-    def _print_results(results, print_results):
+    def print_results(results, print_results):
         if not print_results:
             return
 

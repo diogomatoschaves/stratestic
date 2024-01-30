@@ -90,7 +90,7 @@ class VectorizedBacktester(BacktestMixin):
 
         results, nr_trades, perf, outperf = self._evaluate_backtest(processed_data)
 
-        self._print_results(results, print_results)
+        self.print_results(results, print_results)
 
         self.plot_results(self.processed_data, plot_results, show_plot_no_tc=show_plot_no_tc)
 
@@ -273,11 +273,7 @@ class VectorizedBacktester(BacktestMixin):
             axis=1, inplace=True
         )
 
-        df["margin_ratios"] = np.where(df["margin_ratios"] > 1, 1, df["margin_ratios"])
-        df["margin_ratios"] = np.where(df["margin_ratios"] < 0, 1, df["margin_ratios"])
-        df["margin_ratios"] = np.where(df["side"] == 0, 0, df["margin_ratios"])
-
-        df["margin_ratios"] = df["margin_ratios"].fillna(0)
+        df = self._sanitize_margin_ratio(df)
 
         return df
 
