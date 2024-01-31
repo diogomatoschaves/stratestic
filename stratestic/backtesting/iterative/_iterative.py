@@ -8,7 +8,6 @@ from stratestic.backtesting.helpers.margin import calculate_margin_ratio, get_ma
 from stratestic.trading import Trader
 
 
-# TODO: Improve results presentation
 class IterativeBacktester(BacktestMixin, Trader):
     """
     A class for backtesting trading strategies iteratively using historical data.
@@ -49,7 +48,7 @@ class IterativeBacktester(BacktestMixin, Trader):
         The IterativeBacktester is initialized with a specified trading strategy, initial trading parameters,
         and optional margin trading features. It inherits from both BacktestMixin and Trader classes.
 
-        If a trading symbol is provided, it is assigned to the trading strategy. The positions_lst, _equity,
+        If a trading symbol is provided, it is assigned to the trading strategy. The positions, _equity,
         margin_ratios, returns, strategy_returns, strategy_returns_tc, and positions attributes are initialized.
 
         Example
@@ -66,28 +65,12 @@ class IterativeBacktester(BacktestMixin, Trader):
         if symbol is not None:
             self.strategy.symbol = symbol
 
-        self.positions_lst = []
+        self.position = {
+            symbol: 0
+        }
         self._equity = [self.amount]
         self.margin_ratios = []
         self.returns = []
-        self.strategy_returns = []
-        self.strategy_returns_tc = []
-        self.positions = {
-            symbol: 0
-        }
-
-    def _set_position(self, symbol, value, **kwargs):
-        """
-        Sets the side for the given symbol.
-
-        Parameters
-        ----------
-        symbol : str
-            The trading symbol.
-        value : int
-            The side value.
-        """
-        self.positions[symbol] = value
 
     def _get_position(self, symbol):
         """
@@ -103,39 +86,20 @@ class IterativeBacktester(BacktestMixin, Trader):
         float
             The side value.
         """
-        return self.positions[symbol]
+        return self.position[symbol]
 
-    def _reset_object(self):
+    def _reset_object(self, symbol):
         """
         Resets the object attributes to their initial values.
         """
-        self._set_position(self.symbol, 0)  # initial neutral side
+        super()._reset_object(symbol)
+
         self._equity = [self.amount]
         self.margin_ratios = []
-        self.strategy_returns = []
-        self.strategy_returns_tc = []
-        self.positions_lst = [0]
         self.nr_trades = 0
         self.trades = []
         self.current_balance = self.initial_balance
         self.units = 0
-
-    def calculate_positions(self, data):
-        """
-        Calculates the positions for the given data.
-
-        Parameters
-        ----------
-        data : pandas.DataFrame
-            The historical data.
-
-        Returns
-        -------
-        pandas.DataFrame
-            The data with the calculated positions.
-        """
-        data["side"] = self.positions_lst
-        return data
 
     def _get_trades(self, _):
         """
@@ -218,7 +182,7 @@ class IterativeBacktester(BacktestMixin, Trader):
         """
         super()._test_strategy(params, leverage)
 
-        self._reset_object()
+        self._reset_object(self.symbol)
 
         data = self._get_data().dropna().copy()
 
@@ -269,12 +233,10 @@ class IterativeBacktester(BacktestMixin, Trader):
 
             new_position = self._get_position(self.symbol)
 
-            self.positions_lst.append(new_position)
-
             trades = np.abs(new_position - previous_position)
 
-            self.strategy_returns.append(row[self.returns_col] * previous_position)
-            self.strategy_returns_tc.append(self.strategy_returns[-1] - trades * self.tc)
+            self.strategy_returns[self.symbol].append(row[self.returns_col] * previous_position)
+            self.strategy_returns_tc[self.symbol].append(self.strategy_returns[self.symbol][-1] - trades * self.tc)
 
             self._equity.append(self._get_net_value(row))
 
@@ -307,12 +269,12 @@ class IterativeBacktester(BacktestMixin, Trader):
         self.margin_ratios.append(margin_ratio)
 
     def _evaluate_backtest(self, processed_data):
-        processed_data["side"] = self.positions_lst[1:]
-        processed_data.loc[processed_data.index[0], "side"] = self.positions_lst[1]
+        processed_data["side"] = self.positions[self.symbol][1:]
+        processed_data.loc[processed_data.index[0], "side"] = self.positions[self.symbol][1]
         processed_data.loc[processed_data.index[0], self.returns_col] = 0
 
-        processed_data["strategy_returns"] = self.strategy_returns
-        processed_data["strategy_returns_tc"] = self.strategy_returns_tc
+        processed_data["strategy_returns"] = self.strategy_returns[self.symbol]
+        processed_data["strategy_returns_tc"] = self.strategy_returns_tc[self.symbol]
 
         processed_data["accumulated_returns"] = processed_data[self.returns_col].cumsum().apply(np.exp)
         processed_data["accumulated_strategy_returns"] = processed_data["strategy_returns"].cumsum().apply(np.exp)

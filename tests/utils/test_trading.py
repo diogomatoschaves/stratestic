@@ -10,11 +10,6 @@ class TestTrader:
         "method,extra_input",
         [
             pytest.param(
-                '_set_position',
-                ['BTCUSDT', 1],
-                id="_set_position",
-            ),
-            pytest.param(
                 '_get_position',
                 ['BTCUSDT'],
                 id="_get_position",

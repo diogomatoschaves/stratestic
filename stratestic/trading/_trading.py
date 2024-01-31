@@ -1,12 +1,11 @@
 import logging
+from collections import defaultdict
 from datetime import datetime
 
 
 class Trader:
 
     def __init__(self, amount, units=0):
-
-        symbol = "BTCUSDT"
 
         self.initial_balance = amount
         self.current_balance = amount
@@ -15,9 +14,33 @@ class Trader:
         self.nr_trades = 0
         self.trades = []
         self.date_col = 'date'
+        self.position = defaultdict(int)
+        self.positions = defaultdict(list)
+        self.strategy_returns = defaultdict(list)
+        self.strategy_returns_tc = defaultdict(list)
 
     def _set_position(self, symbol, value, **kwargs):
-        raise NotImplementedError
+        """
+        Sets the side for the given symbol.
+
+        Parameters
+        ----------
+        symbol : str
+            The trading symbol.
+        value : int
+            The side value.
+        """
+        self.position[symbol] = value
+        self.positions[symbol].append(value)
+
+    def _reset_object(self, symbol):
+        """
+        Resets the object attributes to their initial values.
+        """
+        self.positions[symbol] = []
+        self._set_position(symbol, 0)
+        self.strategy_returns[symbol] = []
+        self.strategy_returns_tc[symbol] = []
 
     def _get_position(self, symbol):
         raise NotImplementedError
@@ -99,12 +122,10 @@ class Trader:
             if position in [0, -1]:
                 # go long with full amount
                 self.go_long(symbol, position, date, row, amount=amount, units=units, header=header, **kwargs)
-                self._set_position(symbol, 1, previous_position=position, **kwargs)  # long position
         elif signal == -1:  # signal to go short
             if position in [0, 1]:
                 # go short with full amount
                 self.go_short(symbol, position, date, row, amount=amount, units=units, header=header, **kwargs)
-                self._set_position(symbol, -1, previous_position=position, **kwargs)  # short position
         elif signal == 0:
 
             units = self.units[symbol] if isinstance(self.units, dict) else self.units
@@ -114,8 +135,6 @@ class Trader:
             elif position == 1:
                 self.sell_instrument(symbol, date, row, units=units, header=header, reducing=True, **kwargs)
 
-            self._set_position(symbol, 0, previous_position=position, **kwargs)
-
         if position == signal:
             if print_results:
 
@@ -124,6 +143,8 @@ class Trader:
                 logging.info(header + f"Maintaining {verbose_position} position.")
 
                 self.print_current_balance(date, header, symbol=symbol)
+
+        self._set_position(symbol, signal, previous_position=position, **kwargs)
 
     def print_current_position_value(self, date, price, header='', **kwargs):
         cpv = self.get_current_position_value(price, **kwargs)

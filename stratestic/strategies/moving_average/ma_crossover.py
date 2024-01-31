@@ -152,3 +152,5 @@ class MovingAverageCrossover(StrategyMixin):
             return 1
         elif row["SMA_S"] < row["SMA_L"]:
             return -1
+        else:
+            return 0
