@@ -6,13 +6,13 @@ from stratestic.backtesting.helpers.evaluation._constants import results_section
 import pandas as pd
 
 
-def get_results(processed_data, trades, leverage, amount, trading_costs=None, trading_days=365):
+def get_results(data, trades, leverage, amount, trading_costs=None, trading_days=365):
 
     results = {}
 
-    results["total_duration"] = get_total_duration(processed_data.index)
-    results["start_date"] = get_start_date(processed_data.index)
-    results["end_date"] = get_end_date(processed_data.index)
+    results["total_duration"] = get_total_duration(data.index, data["close_date"])
+    results["start_date"] = get_start_date(data.index)
+    results["end_date"] = get_end_date(data["close_date"])
 
     results["leverage"] = leverage
 
@@ -22,27 +22,33 @@ def get_results(processed_data, trades, leverage, amount, trading_costs=None, tr
     results["initial_equity"] = amount
     results["exposed_capital"] = results["initial_equity"] / leverage
 
-    if "side" in processed_data:
-        results["exposure_time"] = exposure_time(processed_data["side"])
+    if "side" in data:
+        results["exposure_time"] = exposure_time(data["side"])
 
-    if "accumulated_returns" in processed_data:
-        results["buy_and_hold_return"] = return_buy_and_hold_pct(processed_data["accumulated_returns"]) * leverage
+    if "accumulated_returns" in data:
+        results["buy_and_hold_return"] = return_buy_and_hold_pct(data["accumulated_returns"]) * leverage
 
-    if "accumulated_strategy_returns_tc" in processed_data:
-        results["equity_final"] = equity_final(processed_data["accumulated_strategy_returns_tc"] * amount)
-        results["equity_peak"] = equity_peak(processed_data["accumulated_strategy_returns_tc"] * amount)
-        results["return_pct"] = return_pct(processed_data["accumulated_strategy_returns_tc"]) * leverage
-        results["return_pct_annualized"] = return_pct_annualized(processed_data["accumulated_strategy_returns_tc"], leverage)
-        results["calmar_ratio"] = calmar_ratio(processed_data["accumulated_strategy_returns_tc"])
-        results["max_drawdown"] = max_drawdown_pct(processed_data["accumulated_strategy_returns_tc"])
-        results["avg_drawdown"] = avg_drawdown_pct(processed_data["accumulated_strategy_returns_tc"])
-        results["max_drawdown_duration"] = max_drawdown_duration(processed_data["accumulated_strategy_returns_tc"])
-        results["avg_drawdown_duration"] = avg_drawdown_duration(processed_data["accumulated_strategy_returns_tc"])
+    if "accumulated_strategy_returns_tc" in data:
+        results["equity_final"] = equity_final(data["accumulated_strategy_returns_tc"] * amount)
+        results["equity_peak"] = equity_peak(data["accumulated_strategy_returns_tc"] * amount)
+        results["return_pct"] = return_pct(data["accumulated_strategy_returns_tc"]) * leverage
+        results["return_pct_annualized"] = return_pct_annualized(data["accumulated_strategy_returns_tc"], leverage)
+        results["calmar_ratio"] = calmar_ratio(data["accumulated_strategy_returns_tc"])
+        results["max_drawdown"] = max_drawdown_pct(data["accumulated_strategy_returns_tc"])
+        results["avg_drawdown"] = avg_drawdown_pct(data["accumulated_strategy_returns_tc"])
+        results["max_drawdown_duration"] = max_drawdown_duration(
+            data["accumulated_strategy_returns_tc"],
+            data["close_date"]
+        )
+        results["avg_drawdown_duration"] = avg_drawdown_duration(
+            data["accumulated_strategy_returns_tc"],
+            data["close_date"]
+        )
 
-    if "strategy_returns_tc" in processed_data:
-        results["volatility_pct_annualized"] = volatility_pct_annualized(processed_data["strategy_returns_tc"], trading_days)
-        results["sharpe_ratio"] = sharpe_ratio(processed_data["strategy_returns_tc"], trading_days=trading_days)
-        results["sortino_ratio"] = sortino_ratio(processed_data["strategy_returns_tc"])
+    if "strategy_returns_tc" in data:
+        results["volatility_pct_annualized"] = volatility_pct_annualized(data["strategy_returns_tc"], trading_days)
+        results["sharpe_ratio"] = sharpe_ratio(data["strategy_returns_tc"], trading_days=trading_days)
+        results["sortino_ratio"] = sortino_ratio(data["strategy_returns_tc"])
 
     results["nr_trades"] = int(len(trades))
     results["win_rate"] = win_rate_pct(trades)

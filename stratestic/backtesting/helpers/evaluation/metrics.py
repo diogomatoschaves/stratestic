@@ -17,16 +17,16 @@ def geometric_mean(returns: pd.Series) -> float:
     return np.exp(np.log(returns).sum() / (len(returns) or np.nan)) - 1
 
 
-def get_total_duration(index: np.ndarray) -> timedelta:
-    return index[-1] - index[0]
+def get_total_duration(index: pd.DatetimeIndex, close_date: pd.Series) -> timedelta:
+    return close_date[-1] - index[0]
 
 
-def get_start_date(index: np.ndarray) -> datetime:
+def get_start_date(index: pd.DatetimeIndex) -> datetime:
     return index[0]
 
 
-def get_end_date(index: np.ndarray) -> datetime:
-    return index[-1]
+def get_end_date(close_date: pd.Series) -> datetime:
+    return close_date[-1]
 
 
 def exposure_time(positions: np.ndarray) -> float:
@@ -84,8 +84,7 @@ def sortino_ratio(returns: pd.Series, target_return: float = 0, risk_free_rate: 
     downside_returns[downside_returns > target_return] = 0
     downside_deviation = volatility_pct_annualized(downside_returns)
     cumulative_returns = returns.cumsum().apply(np.exp)
-    sortino_ratio = (return_pct_annualized(cumulative_returns) - risk_free_rate) / downside_deviation
-    return sortino_ratio
+    return (return_pct_annualized(cumulative_returns) - risk_free_rate) / downside_deviation
 
 
 def calmar_ratio(cum_returns: pd.Series, risk_free_rate: float = 0) -> float:
@@ -137,13 +136,15 @@ def avg_drawdown_pct(cum_returns: pd.Series) -> float:
     return np.mean(drawdown_maximums) * 100
 
 
-def max_drawdown_duration(cum_returns: pd.Series) -> int:
+def max_drawdown_duration(cum_returns: pd.Series, close_date: pd.Series) -> int:
     """Calculate the duration of the maximum drawdown in terms of the period between peak to peak.
 
     Parameters
     ----------
     cum_returns : pd.Series
         An array of cumulative returns.
+    close_date : pd.Series
+        An array of dates with the close of the period.
 
     Returns
     -------
@@ -163,12 +164,12 @@ def max_drawdown_duration(cum_returns: pd.Series) -> int:
             if drawdown_duration > max_drawdown_dur:
                 max_drawdown_dur = drawdown_duration
                 dd_start = cum_returns.index[peak_index]
-                dd_end = cum_returns.index[i]
+                dd_end = close_date[i]
 
     return dd_end - dd_start
 
 
-def get_dd_durations_limits(cum_returns: pd.Series) -> Tuple[List, List]:
+def get_dd_durations_limits(cum_returns: pd.Series, close_date: pd.Series) -> Tuple[List, List]:
     peak_index = 0
 
     durations = []
@@ -189,7 +190,7 @@ def get_dd_durations_limits(cum_returns: pd.Series) -> Tuple[List, List]:
                 drawdown = False
         else:
             drawdown = True
-            dd_end = cum_returns.index[i]
+            dd_end = close_date[i]
             dd_start_end = (dd_start, dd_end)
             dd_duration = (dd_end - dd_start).total_seconds()
 
@@ -200,9 +201,9 @@ def get_dd_durations_limits(cum_returns: pd.Series) -> Tuple[List, List]:
     return durations, limits
 
 
-def avg_drawdown_duration(cum_returns: pd.Series) -> float:
+def avg_drawdown_duration(cum_returns: pd.Series, close_date: pd.Series) -> float:
     """Calculate the average duration of drawdowns."""
-    durations, _ = get_dd_durations_limits(cum_returns)
+    durations, _ = get_dd_durations_limits(cum_returns, close_date)
 
     return np.mean(durations) if len(durations) > 0 else 0
 

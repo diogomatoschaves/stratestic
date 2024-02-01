@@ -382,6 +382,11 @@ class BacktestMixin:
         return df
 
     def _get_results(self, trades, processed_data):
+
+        freq = pd.infer_freq(processed_data.index)
+
+        processed_data["close_date"] = processed_data.index.shift(1, freq=freq)
+
         return get_results(
             processed_data,
             trades,

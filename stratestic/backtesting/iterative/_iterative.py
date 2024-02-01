@@ -296,7 +296,7 @@ class IterativeBacktester(BacktestMixin, Trader):
 
         outperf = perf - perf_bh
 
-        results = self._get_results(self.trades, processed_data)
+        results = self._get_results(self.trades, processed_data.copy())
 
         return results, self.nr_trades, perf, outperf
 

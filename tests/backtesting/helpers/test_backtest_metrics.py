@@ -1,7 +1,8 @@
 import pytest
+from pandas import Timedelta, Timestamp
 
 from stratestic.backtesting.helpers.evaluation.metrics import *
-from tests.setup.test_data.returns import cum_returns, returns
+from tests.setup.test_data.returns import cum_returns, returns, index
 
 
 @pytest.fixture
@@ -29,6 +30,30 @@ def cumulative_returns():
 @pytest.fixture
 def log_returns():
     return returns
+
+
+def test_get_total_duration():
+
+    close_date = index.shift(1)
+
+    total_duration = get_total_duration(index, close_date)
+
+    assert total_duration == Timedelta('0 days 10:00:00')
+
+
+def test_get_start_date():
+
+    start_date = get_start_date(index)
+
+    assert start_date == Timestamp('2023-09-01 20:00:00+0000', tz='UTC', freq='H')
+
+
+def test_get_end_date():
+    close_date = index.shift(1)
+
+    end_date = get_end_date(close_date)
+
+    assert end_date == Timestamp('2023-09-02 06:00:00+0000', tz='UTC', freq='H')
 
 
 def test_exposure_time():
@@ -80,11 +105,15 @@ def test_avg_drawdown_pct(cumulative_returns):
 
 
 def test_max_drawdown_duration(cumulative_returns):
-    assert max_drawdown_duration(cumulative_returns) == timedelta(hours=4)
+    close_date = cumulative_returns.index.shift(1)
+
+    assert max_drawdown_duration(cumulative_returns, close_date) == timedelta(hours=5)
 
 
 def test_avg_drawdown_duration(cumulative_returns):
-    assert round(avg_drawdown_duration(cumulative_returns), 2) == 10800.0
+    close_date = cumulative_returns.index.shift(1)
+
+    assert round(avg_drawdown_duration(cumulative_returns, close_date), 2) == 14400.0
 
 
 def test_win_rate_pct(trades):

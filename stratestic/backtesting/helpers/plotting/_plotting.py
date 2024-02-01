@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
@@ -151,7 +152,10 @@ def plot_equity_curves(fig, data, show_plot_no_tc):
         ), row=1, col=1)
 
     # plot drawdowns
-    durations, limits = get_dd_durations_limits(data['accumulated_strategy_returns_tc'])
+    freq = pd.infer_freq(data.index)
+    close_date = data.index.shift(1, freq=freq)
+
+    durations, limits = get_dd_durations_limits(data['accumulated_strategy_returns_tc'], close_date)
 
     x = []
     y = []

@@ -309,7 +309,7 @@ class VectorizedBacktester(BacktestMixin):
         # out-/underperformance of strategy
         outperf = perf - processed_data["accumulated_returns"].iloc[-1]
 
-        results = self._get_results(self.trades, processed_data)
+        results = self._get_results(self.trades, processed_data.copy())
 
         return results, nr_trades, perf, outperf
 
