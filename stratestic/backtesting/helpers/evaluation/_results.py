@@ -25,10 +25,12 @@ def get_results(processed_data, trades, leverage, amount, trading_costs=None, tr
     if "side" in processed_data:
         results["exposure_time"] = exposure_time(processed_data["side"])
 
+    if "accumulated_returns" in processed_data:
+        results["buy_and_hold_return"] = return_buy_and_hold_pct(processed_data["accumulated_returns"]) * leverage
+
     if "accumulated_strategy_returns_tc" in processed_data:
         results["equity_final"] = equity_final(processed_data["accumulated_strategy_returns_tc"] * amount)
         results["equity_peak"] = equity_peak(processed_data["accumulated_strategy_returns_tc"] * amount)
-        results["buy_and_hold_return"] = return_buy_and_hold_pct(processed_data["accumulated_returns"]) * leverage
         results["return_pct"] = return_pct(processed_data["accumulated_strategy_returns_tc"]) * leverage
         results["return_pct_annualized"] = return_pct_annualized(processed_data["accumulated_strategy_returns_tc"], leverage)
         results["calmar_ratio"] = calmar_ratio(processed_data["accumulated_strategy_returns_tc"])
