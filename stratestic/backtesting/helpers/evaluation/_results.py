@@ -6,83 +6,54 @@ from stratestic.backtesting.helpers.evaluation._constants import results_section
 import pandas as pd
 
 
-def get_results(processed_data, trades, leverage, tc, amount, trading_days):
-    total_duration = get_total_duration(processed_data.index)
-    start_date = get_start_date(processed_data.index)
-    end_date = get_end_date(processed_data.index)
+def get_results(processed_data, trades, leverage, amount, trading_costs=None, trading_days=365):
 
-    leverage = leverage
-    trading_costs = tc * 100
-    initial_equity = amount
-    exposed_capital = initial_equity / leverage
+    results = {}
 
-    exposure = exposure_time(processed_data["side"])
-    final_equity = equity_final(processed_data["accumulated_strategy_returns_tc"] * amount)
-    peak_equity = equity_peak(processed_data["accumulated_strategy_returns_tc"] * amount)
-    buy_and_hold_return = return_buy_and_hold_pct(processed_data["accumulated_returns"]) * leverage
-    pct_return = return_pct(processed_data["accumulated_strategy_returns_tc"]) * leverage
-    annualized_pct_return = return_pct_annualized(processed_data["accumulated_strategy_returns_tc"], leverage)
-    annualized_pct_volatility = volatility_pct_annualized(
-        processed_data["strategy_returns_tc"],
-        trading_days
-    )
+    results["total_duration"] = get_total_duration(processed_data.index)
+    results["start_date"] = get_start_date(processed_data.index)
+    results["end_date"] = get_end_date(processed_data.index)
 
-    sharpe = sharpe_ratio(processed_data["strategy_returns_tc"], trading_days=trading_days)
-    sortino = sortino_ratio(processed_data["strategy_returns_tc"])
-    calmar = calmar_ratio(processed_data["accumulated_strategy_returns_tc"])
-    max_drawdown = max_drawdown_pct(processed_data["accumulated_strategy_returns_tc"])
-    avg_drawdown = avg_drawdown_pct(processed_data["accumulated_strategy_returns_tc"])
-    max_drawdown_dur = max_drawdown_duration(processed_data["accumulated_strategy_returns_tc"])
-    avg_drawdown_dur = avg_drawdown_duration(processed_data["accumulated_strategy_returns_tc"])
+    results["leverage"] = leverage
 
-    nr_trades = int(len(trades))
-    win_rate = win_rate_pct(trades)
-    best_trade = best_trade_pct(trades, leverage)
-    worst_trade = worst_trade_pct(trades, leverage)
-    avg_trade = avg_trade_pct(trades, leverage)
-    max_trade_dur = max_trade_duration(trades)
-    avg_trade_dur = avg_trade_duration(trades)
-    profit_fctor = profit_factor(trades)
-    expectancy = expectancy_pct(trades)
-    sqn = system_quality_number(trades)
+    if trading_costs is not None:
+        results["trading_costs"] = trading_costs * 100
 
-    results = pd.Series(
-        dict(
-            total_duration=total_duration,
-            nr_trades=nr_trades,
-            start_date=start_date,
-            end_date=end_date,
-            trading_costs=trading_costs,
-            leverage=leverage,
-            initial_equity=initial_equity,
-            exposed_capital=exposed_capital,
-            exposure_time=exposure,
-            buy_and_hold_return=buy_and_hold_return,
-            return_pct=pct_return,
-            equity_final=final_equity,
-            equity_peak=peak_equity,
-            return_pct_annualized=annualized_pct_return,
-            volatility_pct_annualized=annualized_pct_volatility,
-            sharpe_ratio=sharpe,
-            sortino_ratio=sortino,
-            calmar_ratio=calmar,
-            max_drawdown=max_drawdown,
-            avg_drawdown=avg_drawdown,
-            max_drawdown_duration=max_drawdown_dur,
-            avg_drawdown_duration=avg_drawdown_dur,
-            win_rate=win_rate,
-            best_trade=best_trade,
-            worst_trade=worst_trade,
-            avg_trade=avg_trade,
-            max_trade_duration=max_trade_dur,
-            avg_trade_duration=avg_trade_dur,
-            profit_factor=profit_fctor,
-            expectancy=expectancy,
-            sqn=sqn
-        )
-    )
+    results["initial_equity"] = amount
+    results["exposed_capital"] = results["initial_equity"] / leverage
 
-    return results
+    if "side" in processed_data:
+        results["exposure_time"] = exposure_time(processed_data["side"])
+
+    if "accumulated_strategy_returns_tc" in processed_data:
+        results["equity_final"] = equity_final(processed_data["accumulated_strategy_returns_tc"] * amount)
+        results["equity_peak"] = equity_peak(processed_data["accumulated_strategy_returns_tc"] * amount)
+        results["buy_and_hold_return"] = return_buy_and_hold_pct(processed_data["accumulated_returns"]) * leverage
+        results["return_pct"] = return_pct(processed_data["accumulated_strategy_returns_tc"]) * leverage
+        results["return_pct_annualized"] = return_pct_annualized(processed_data["accumulated_strategy_returns_tc"], leverage)
+        results["calmar_ratio"] = calmar_ratio(processed_data["accumulated_strategy_returns_tc"])
+        results["max_drawdown"] = max_drawdown_pct(processed_data["accumulated_strategy_returns_tc"])
+        results["avg_drawdown"] = avg_drawdown_pct(processed_data["accumulated_strategy_returns_tc"])
+        results["max_drawdown_duration"] = max_drawdown_duration(processed_data["accumulated_strategy_returns_tc"])
+        results["avg_drawdown_duration"] = avg_drawdown_duration(processed_data["accumulated_strategy_returns_tc"])
+
+    if "strategy_returns_tc" in processed_data:
+        results["volatility_pct_annualized"] = volatility_pct_annualized(processed_data["strategy_returns_tc"], trading_days)
+        results["sharpe_ratio"] = sharpe_ratio(processed_data["strategy_returns_tc"], trading_days=trading_days)
+        results["sortino_ratio"] = sortino_ratio(processed_data["strategy_returns_tc"])
+
+    results["nr_trades"] = int(len(trades))
+    results["win_rate"] = win_rate_pct(trades)
+    results["best_trade"] = best_trade_pct(trades, leverage)
+    results["worst_trade"] = worst_trade_pct(trades, leverage)
+    results["avg_trade"] = avg_trade_pct(trades, leverage)
+    results["max_trade_duration"] = max_trade_duration(trades)
+    results["avg_trade_duration"] = avg_trade_duration(trades)
+    results["profit_factor"] = profit_factor(trades)
+    results["expectancy"] = expectancy_pct(trades)
+    results["sqn"] = system_quality_number(trades)
+
+    return pd.Series(results)
 
 
 def log_results(results, backtesting=True):

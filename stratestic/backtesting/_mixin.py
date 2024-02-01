@@ -386,8 +386,8 @@ class BacktestMixin:
             processed_data,
             trades,
             self.leverage,
-            self.tc,
             self.amount,
+            self.tc,
             config_vars.trading_days
         )
 
