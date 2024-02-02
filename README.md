@@ -413,9 +413,9 @@ combined = StrategyCombiner([mov_avg, momentum], method='Majority')
 vect = VectorizedBacktester(combined, symbol, amount=1000, trading_costs=trading_costs)
 vect.load_data() # Load the default sample data. You can pass your own DataFrame to 'load_data'
 
-# The optimization parameters are passed as an array of dictionaries containing the parameter intervals and step
-# for each individual strategy.
-vect.optimize([dict(sma_s=(20, 40)), dict(window=(60, 80))])
+# The optimization parameters are passed as an array of dictionaries containing the 
+# parameter intervals and steps for each individual strategy.
+vect.optimize([dict(sma_s=(20, 40), sma_l=(100, 200)), dict(window=(60, 80))])
 ```
 
 <a name="new-strategies"></a>
@@ -458,7 +458,13 @@ class MyStrategy(StrategyMixin):
         Returns signal based on current data.
     """
 
-    def __init__(self, parameter1, parameter2=default_value, data=None, **kwargs):
+    def __init__(
+        self, 
+        parameter1: <type>,
+        parameter2: <type> = <some_default_value>,
+        data=None,
+        **kwargs
+    ):
         """
         Initializes the strategy object.
 
@@ -473,10 +479,15 @@ class MyStrategy(StrategyMixin):
         **kwargs : dict, optional
             Additional keyword arguments to be passed to parent class, by default None.
         """
-        self._parameter1 = parameter1
+        self._parameter1 = parameter1  # Each specific parameter that you want to add to the strategy
+                                       # must be initalized in this manner, with a _ followed by the name 
+                                       # of the parameter
         self._parameter2 = parameter2
 
-        self.params = OrderedDict(parameter1=lambda x: x)
+        self.params = OrderedDict(
+            parameter1=lambda x: <type>(x),
+            parameter2=lambda x: <type>(x)
+        ) 
 
         StrategyMixin.__init__(self, data, **kwargs)
 
@@ -514,7 +525,7 @@ class MyStrategy(StrategyMixin):
         pd.DataFrame
             OHLCV data with additional 'position' column containing -1 for short, 1 for long.
         """
-        # Code to calculate positions goes here
+        data["side"] =  # Code to calculate side goes here
 
         return data
 
@@ -538,27 +549,34 @@ class MyStrategy(StrategyMixin):
 
 ```
 
-You would replace "MyStrategy" with the name of your strategy, and replace "Description of my strategy"
-with a brief explanation of what your strategy does. Similarly, "parameter1" and "parameter2" would be
-replaced with the names of your strategy's parameters, and "type" would be replaced with the appropriate
-data types.
+You would replace `MyStrategy` with the name of your strategy, and replace "Description of my strategy"
+with a brief explanation of what your strategy does.
 
-The params attribute is an OrderedDict that specifies the default parameters for your strategy. 
+`__init__()` is where you initialize your strategy parameters. In the case of our example strategy outlined 
+above, `parameter1` and `parameter2` would be replaced with the actual names of your strategy's parameter(s), 
+and `<type>` would be replaced with the appropriate data types of your parameters. 
+This is very important for appropriate type checking on the frontend.
+
+The `params` attribute is an `OrderedDict` that specifies the default parameters for your strategy. 
 The key is the parameter name, and the value is a lambda function that converts the user's input
 into the appropriate data type.
 
-In `__init__()`, you would initialize the strategy object with the appropriate parameters, and 
-call StrategyMixin.__init__(self, data, **kwargs) to initialize the parent class.
+Finally, we need to call StrategyMixin.__init__(self, data, **kwargs) in order to initialize the parent class.
 
-`update_data()` should contain code to retrieve and prepare the data for your strategy. This 
-will depend on the data source you are using. It is advised to check the provided strategies 
-to see how this would be done.
+`update_data()` should contain code to retrieve and prepare the data for your strategy. This is where you can 
+add indicators or manipulate the data and create new columns that will then be used to calculate a signal. 
+And example if you were developing a momentum strategy would be to calculate the moving average for the selected window.
 
 `calculate_positions()` should contain code to calculate the positions for your strategy based 
-on the current data. This is where you input the logic of your strategy in a vectorized way. 
-Note that this may not be possible, depending on your strategy, If that's the case, this method can 
-be ignored.
+on the current data. This is where you input the logic of your strategy in a vectorized way. For the same example 
+of the momentum strategy, here you'd add the logic for getting the signal of when it was a BUY or a SELL.
+
+Note that this may not be possible if your strategy is very complex. In that this method can 
+be ignored, and only the IterativeBacktester can be used.
 
 `get_signal()` should contain code to generate the signal for a given row of data. The signal 
 should be an integer, where -1 represents a short position, 1 represents a long position, 
 and 0 represents a neutral position.
+
+**In any case it is highly recommended to check the existing [strategies](https://github.com/diogomatoschaves/stratestic/tree/main/stratestic/strategies) to get a better 
+idea on how to implement these methods.**
