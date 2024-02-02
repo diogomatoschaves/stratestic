@@ -331,9 +331,9 @@ def expectancy_pct(trades: List[Trade], leverage: int = 1) -> float:
     win_trades = winning_trades(trades)
     lose_trades = losing_trades(trades)
     if len(lose_trades) == 0:
-        return avg_trade_pct(win_trades)
+        return avg_trade_pct(win_trades, leverage)
     elif len(win_trades) == 0:
-        return avg_trade_pct(lose_trades)
+        return avg_trade_pct(lose_trades, leverage)
     else:
         win_rate = win_rate_pct(trades) / 100
         avg_win = avg_trade_pct(win_trades, leverage) / 100
