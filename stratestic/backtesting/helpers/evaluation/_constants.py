@@ -53,6 +53,6 @@ results_sections = {
                 'volatility_pct_annualized', 'buy_and_hold_return', ],
     'Drawdowns': ['max_drawdown', 'avg_drawdown', 'max_drawdown_duration', 'avg_drawdown_duration'],
     'Trades': ['nr_trades', 'win_rate', 'best_trade', 'worst_trade', 'avg_trade',
-               'max_trade_duration', 'avg_trade_duration'],
-    'Ratios': ['sharpe_ratio', 'sortino_ratio', 'calmar_ratio', 'profit_factor', 'expectancy', 'sqn']
+               'max_trade_duration', 'avg_trade_duration', 'expectancy'],
+    'Ratios': ['sharpe_ratio', 'sortino_ratio', 'calmar_ratio', 'profit_factor', 'sqn']
 }
