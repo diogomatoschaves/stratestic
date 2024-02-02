@@ -326,18 +326,7 @@ def trades_net_profit(trades: List[Trade]) -> List[float]:
     ))
 
 
-def profit_factor(trades: List[Trade]) -> float:
-    """Calculate the profit factor."""
-    win_trades = winning_trades(trades)
-    lose_trades = losing_trades(trades)
-
-    if len(lose_trades) == 0:
-        return np.inf
-    else:
-        return trades_net_profit_sum(win_trades) / np.abs(trades_net_profit_sum(lose_trades))
-
-
-def expectancy_pct(trades: List[Trade]) -> float:
+def expectancy_pct(trades: List[Trade], leverage: int = 1) -> float:
     """Calculate the expectancy percentage."""
     win_trades = winning_trades(trades)
     lose_trades = losing_trades(trades)
@@ -347,9 +336,20 @@ def expectancy_pct(trades: List[Trade]) -> float:
         return avg_trade_pct(lose_trades)
     else:
         win_rate = win_rate_pct(trades) / 100
-        avg_win = avg_trade_pct(win_trades) / 100
-        avg_loss = avg_trade_pct(lose_trades) / 100
+        avg_win = avg_trade_pct(win_trades, leverage) / 100
+        avg_loss = avg_trade_pct(lose_trades, leverage) / 100
         return (win_rate * avg_win - (1 - win_rate) * avg_loss) * 100
+
+
+def profit_factor(trades: List[Trade]) -> float:
+    """Calculate the profit factor."""
+    win_trades = winning_trades(trades)
+    lose_trades = losing_trades(trades)
+
+    if len(lose_trades) == 0:
+        return np.inf
+    else:
+        return trades_net_profit_sum(win_trades) / np.abs(trades_net_profit_sum(lose_trades))
 
 
 def system_quality_number(trades):

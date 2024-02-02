@@ -6,7 +6,7 @@ legend_mapping = {
     "accumulated_strategy_returns_tc": "Strategy returns (with trading costs)"
 }
 results_mapping = {
-    'initial_equity': lambda unit: f"Initial Equity [{unit}]",
+    'initial_equity': lambda unit: f"Traded Initial Amount [{unit}]",
     'exposed_capital': lambda unit: f"Exposed Capital [{unit}]",
     'equity_final': lambda unit: f"Equity Final [{unit}]",
     'equity_peak': lambda unit: f"Equity Peak [{unit}]",

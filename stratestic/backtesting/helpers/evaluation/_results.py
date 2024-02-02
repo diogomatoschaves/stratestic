@@ -83,7 +83,7 @@ def get_trades_results(results, trades, leverage):
     results["avg_trade"] = avg_trade_pct(trades, leverage)
     results["max_trade_duration"] = max_trade_duration(trades)
     results["avg_trade_duration"] = avg_trade_duration(trades)
-    results["expectancy"] = expectancy_pct(trades)
+    results["expectancy"] = expectancy_pct(trades, leverage)
 
     return results
 
@@ -104,7 +104,7 @@ def get_ratios_results(results, data, trades, trading_days):
 
 def log_results(results, backtesting=True):
 
-    length = 50
+    length = 55
 
     logging.info("")
 
@@ -140,7 +140,7 @@ def log_results(results, backtesting=True):
                 except TypeError:
                     value = str(value)
 
-            logging.info(f'{printed_title:<25}{value.rjust(25)}')
+            logging.info(f'{printed_title:<30}{value.rjust(25)}')
         logging.info('-' * length)
         logging.info('')
     logging.info('*' * length)
