@@ -178,7 +178,7 @@ class TestIterativeBacktester:
                     "method": "Majority"
                 },
                 [{"window": (2, 4)}, {"ma": (1, 3)}, {}],
-                [{'window': 3.0}, {'ma': 1.0}, {'ma': 3.0, 'sd': 1.0}],
+                [{'window': 3.0}, {'ma': 2.0}, {'ma': 3.0, 'sd': 1.0}],
                 id='3_strategies-majority'
             ),
             pytest.param(

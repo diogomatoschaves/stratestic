@@ -64,7 +64,7 @@ class TestStrategyCombiner:
                     "strategies": [Momentum(2), MovingAverage(2)],
                     "method": "Majority"
                 },
-                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, -1.0, 0.0, -1.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, -1.0, 0.0, 1.0],
                 id='2_strategies-Majority'
             ),
             pytest.param(
@@ -72,7 +72,7 @@ class TestStrategyCombiner:
                     "strategies": [Momentum(2), MovingAverage(2)],
                     "method": "Unanimous"
                 },
-                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, -1.0, 0.0, -1.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, -1.0, 0.0, 1.0],
                 id='2_strategies-Unanimous'
             ),
             pytest.param(
@@ -80,7 +80,7 @@ class TestStrategyCombiner:
                     "strategies": [Momentum(2), MovingAverage(2), BollingerBands(3, 1)],
                     "method": "Majority"
                 },
-                [0.0, 0.0, 0.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, -1.0],
+                [0.0, 0.0, 0.0, 1.0, 1.0, 1.0, -1.0, 0.0, -1.0, 0.0, 1.0],
                 id='3_strategies-Majority'
             ),
             pytest.param(

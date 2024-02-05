@@ -101,8 +101,8 @@ class MovingAverage(StrategyMixin):
         pd.DataFrame
             OHLCV data with additional 'side' column containing -1 for short, 1 for long.
         """
-        data["side"] = np.where(data["SMA"] > data[self.close_col], 1, 0)
-        data["side"] = np.where(data["SMA"] < data[self.close_col], -1, data["side"])
+        data["side"] = np.where(data["SMA"] < data[self.close_col], 1, 0)
+        data["side"] = np.where(data["SMA"] > data[self.close_col], -1, data["side"])
         return data
 
     def get_signal(self, row=None):
@@ -122,10 +122,9 @@ class MovingAverage(StrategyMixin):
         if row is None:
             row = self.data.iloc[-1]
 
-        if row["SMA"] > row[self.close_col]:
+        if row["SMA"] < row[self.close_col]:
             return 1
-        elif row["SMA"] < row[self.close_col]:
+        elif row["SMA"] > row[self.close_col]:
             return -1
-
-        elif row["SMA"] == row[self.close_col]:
+        else:
             return 0

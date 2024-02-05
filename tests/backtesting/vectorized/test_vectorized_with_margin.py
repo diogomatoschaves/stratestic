@@ -162,9 +162,9 @@ class TestVectorizedBacktesterMargin:
     @pytest.mark.parametrize(
         "margin_threshold, expected_result",
         [
-            pytest.param(0.1, 18, id="margin_threshold=0.1"),
-            pytest.param(0.5, 45, id="margin_threshold=0.5"),
-            pytest.param(1, 55, id="margin_threshold=1")
+            pytest.param(0.1, 23, id="margin_threshold=0.1"),
+            pytest.param(0.5, 91, id="margin_threshold=0.5"),
+            pytest.param(1, 124, id="margin_threshold=1")
         ],
     )
     def test_maximum_leverage(

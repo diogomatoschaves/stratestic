@@ -402,4 +402,4 @@ expected_data_set_parameters = pd.DataFrame(
     ]
 )
 
-expected_signal = -1
+expected_signal = 1
