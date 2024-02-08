@@ -3,6 +3,7 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 
+from stratestic.backtesting.helpers.evaluation import SIDE
 from stratestic.strategies._mixin import StrategyMixin
 from stratestic.strategies.properties import STRATEGIES
 from stratestic.utils.exceptions import StrategyInvalid, StrategyRequired, OptimizationParametersInvalid
@@ -201,7 +202,7 @@ class StrategyCombiner(StrategyMixin):
 
         self.data = data.copy()
         self.data = self._calculate_returns(self.data)
-        self.data["side"] = 0
+        self.data[SIDE] = 0
 
         for i, strategy in enumerate(self.strategies):
             strategy.data = strategy.update_data(data.copy())
@@ -209,7 +210,7 @@ class StrategyCombiner(StrategyMixin):
             strategy.data = strategy.data.dropna()
             strategy.symbol = self.symbol
 
-            self.data = self.data.join(strategy.data["side"], rsuffix=f"_{i + 1}", how='inner')
+            self.data = self.data.join(strategy.data[SIDE], rsuffix=f"_{i + 1}", how='inner')
 
     def set_parameters(self, params=None, data=None):
         """
@@ -290,15 +291,15 @@ class StrategyCombiner(StrategyMixin):
             DataFrame with the calculated combined positions.
         """
 
-        position_cols = [col for col in data.columns if "side" in col][1:]  # Excludes 'side' column
+        position_cols = [col for col in data.columns if SIDE in col][1:]  # Excludes 'side' column
 
         if self.method == 'Majority':
 
-            data["side"] = self.get_majority_position(data, position_cols)
+            data[SIDE] = self.get_majority_position(data, position_cols)
 
         elif self.method == 'Unanimous':
 
-            data["side"] = self.get_unanimous_position(data, position_cols)
+            data[SIDE] = self.get_unanimous_position(data, position_cols)
 
         return data
 
@@ -321,7 +322,7 @@ class StrategyCombiner(StrategyMixin):
         if row is None:
             row = self.data.iloc[-1]
 
-        positions_cols = [col for col in row.index if "side" in col][1:]
+        positions_cols = [col for col in row.index if SIDE in col][1:]
 
         signal = 0
         if self.method == 'Unanimous':

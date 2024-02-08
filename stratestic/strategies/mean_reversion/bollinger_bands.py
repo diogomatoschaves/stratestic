@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 import numpy as np
 
+from stratestic.backtesting.helpers.evaluation import SIDE
 from stratestic.strategies._mixin import StrategyMixin
 
 
@@ -85,10 +86,10 @@ class BollingerBands(StrategyMixin):
 
     def calculate_positions(self, data):
         data["distance"] = data[self.close_col] - data["sma"]
-        data["side"] = np.where(data[self.close_col] > data["upper"], -1, np.nan)
-        data["side"] = np.where(data[self.close_col] < data["lower"], 1, data["side"])
-        data["side"] = np.where(data["distance"] * data["distance"].shift(1) < 0, 0, data["side"])
-        data["side"] = data["side"].ffill().fillna(0)
+        data[SIDE] = np.where(data[self.close_col] > data["upper"], -1, np.nan)
+        data[SIDE] = np.where(data[self.close_col] < data["lower"], 1, data[SIDE])
+        data[SIDE] = np.where(data["distance"] * data["distance"].shift(1) < 0, 0, data[SIDE])
+        data[SIDE] = data[SIDE].ffill().fillna(0)
 
         return data
 
@@ -100,4 +101,4 @@ class BollingerBands(StrategyMixin):
         if row is None:
             row = self.data.iloc[-1]
 
-        return int(row["side"])
+        return int(row[SIDE])

@@ -1,16 +1,18 @@
 import logging
 
-from stratestic.backtesting.helpers.evaluation.metrics import *
-from stratestic.backtesting.helpers.evaluation._constants import results_sections, results_mapping, results_aesthetics
-
 import pandas as pd
 
-
-CUM_STRATEGY_RETURNS = "accumulated_strategy_returns_tc"
-CUM_RETURNS = "accumulated_returns"
-STRATEGY_RETURNS = "strategy_returns_tc"
-SIDE = "side"
-CLOSE_DATE = "close_date"
+from stratestic.backtesting.helpers.evaluation.metrics import *
+from stratestic.backtesting.helpers.evaluation._constants import (
+    results_sections,
+    results_mapping,
+    results_aesthetics,
+    SIDE,
+    CLOSE_DATE,
+    CUM_SUM_STRATEGY_TC,
+    STRATEGY_RETURNS_TC,
+    BUY_AND_HOLD
+)
 
 
 def get_results(data, trades, leverage, amount, trading_costs=None, trading_days=365):
@@ -43,34 +45,34 @@ def get_overview_results(results, data, leverage, trading_costs, amount):
     results["initial_equity"] = amount
     results["exposed_capital"] = results["initial_equity"] / leverage
 
-    if "side" in data:
+    if SIDE in data:
         results["exposure_time"] = exposure_time(data[SIDE])
 
     return results
 
 
 def get_returns_results(results, data, leverage, amount, trading_days):
-    if CUM_STRATEGY_RETURNS in data:
-        results["equity_final"] = equity_final(data[CUM_STRATEGY_RETURNS] * amount)
-        results["equity_peak"] = equity_peak(data[CUM_STRATEGY_RETURNS] * amount)
-        results["return_pct"] = return_pct(data[CUM_STRATEGY_RETURNS]) * leverage
-        results["return_pct_annualized"] = return_pct_annualized(data[CUM_STRATEGY_RETURNS], leverage)
+    if CUM_SUM_STRATEGY_TC in data:
+        results["equity_final"] = equity_final(data[CUM_SUM_STRATEGY_TC] * amount)
+        results["equity_peak"] = equity_peak(data[CUM_SUM_STRATEGY_TC] * amount)
+        results["return_pct"] = return_pct(data[CUM_SUM_STRATEGY_TC]) * leverage
+        results["return_pct_annualized"] = return_pct_annualized(data[CUM_SUM_STRATEGY_TC], leverage)
 
-        if STRATEGY_RETURNS in data:
-            results["volatility_pct_annualized"] = volatility_pct_annualized(data[STRATEGY_RETURNS], trading_days)
+        if STRATEGY_RETURNS_TC in data:
+            results["volatility_pct_annualized"] = volatility_pct_annualized(data[STRATEGY_RETURNS_TC], trading_days)
 
         if "accumulated_returns" in data:
-            results["buy_and_hold_return"] = return_buy_and_hold_pct(data[CUM_RETURNS]) * leverage
+            results["buy_and_hold_return"] = return_buy_and_hold_pct(data[BUY_AND_HOLD]) * leverage
 
         return results
 
 
 def get_drawdown_results(results, data):
-    if CUM_STRATEGY_RETURNS in data:
-        results["max_drawdown"] = max_drawdown_pct(data[CUM_STRATEGY_RETURNS])
-        results["avg_drawdown"] = avg_drawdown_pct(data[CUM_STRATEGY_RETURNS])
-        results["max_drawdown_duration"] = max_drawdown_duration(data[CUM_STRATEGY_RETURNS], data[CLOSE_DATE])
-        results["avg_drawdown_duration"] = avg_drawdown_duration(data[CUM_STRATEGY_RETURNS], data[CLOSE_DATE])
+    if CUM_SUM_STRATEGY_TC in data:
+        results["max_drawdown"] = max_drawdown_pct(data[CUM_SUM_STRATEGY_TC])
+        results["avg_drawdown"] = avg_drawdown_pct(data[CUM_SUM_STRATEGY_TC])
+        results["max_drawdown_duration"] = max_drawdown_duration(data[CUM_SUM_STRATEGY_TC], data[CLOSE_DATE])
+        results["avg_drawdown_duration"] = avg_drawdown_duration(data[CUM_SUM_STRATEGY_TC], data[CLOSE_DATE])
 
         return results
 
@@ -89,12 +91,12 @@ def get_trades_results(results, trades, leverage):
 
 
 def get_ratios_results(results, data, trades, trading_days):
-    if CUM_STRATEGY_RETURNS in data:
-        results["calmar_ratio"] = calmar_ratio(data[CUM_STRATEGY_RETURNS])
+    if CUM_SUM_STRATEGY_TC in data:
+        results["calmar_ratio"] = calmar_ratio(data[CUM_SUM_STRATEGY_TC])
 
-    if STRATEGY_RETURNS in data:
-        results["sharpe_ratio"] = sharpe_ratio(data[STRATEGY_RETURNS], trading_days=trading_days)
-        results["sortino_ratio"] = sortino_ratio(data[STRATEGY_RETURNS])
+    if STRATEGY_RETURNS_TC in data:
+        results["sharpe_ratio"] = sharpe_ratio(data[STRATEGY_RETURNS_TC], trading_days=trading_days)
+        results["sortino_ratio"] = sortino_ratio(data[STRATEGY_RETURNS_TC])
 
     results["profit_factor"] = profit_factor(trades)
     results["sqn"] = system_quality_number(trades)

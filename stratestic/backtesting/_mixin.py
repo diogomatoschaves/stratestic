@@ -9,7 +9,15 @@ from scipy.optimize import brute
 import plotly.io as pio
 
 from stratestic.backtesting.combining import StrategyCombiner
-from stratestic.backtesting.helpers.evaluation import get_results, log_results
+from stratestic.backtesting.helpers.evaluation import (
+    get_results,
+    log_results,
+    BUY_AND_HOLD,
+    CUM_SUM_STRATEGY,
+    CUM_SUM_STRATEGY_TC,
+    MARGIN_RATIO,
+    SIDE
+)
 from stratestic.backtesting.helpers.plotting import plot_backtest_results
 from stratestic.utils.config_parser import get_config
 from stratestic.utils.exceptions import StrategyRequired, OptimizationParametersInvalid, SymbolInvalid, LeverageInvalid
@@ -280,7 +288,7 @@ class BacktestMixin:
                 break
 
             self._test_strategy(leverage=leverage, print_results=False, plot_results=False)
-            if self.processed_data["margin_ratios"].max() >= self.margin_threshold:
+            if self.processed_data[MARGIN_RATIO].max() >= self.margin_threshold:
                 right_limit = leverage
             else:
                 left_limit = leverage
@@ -373,11 +381,11 @@ class BacktestMixin:
         
     @staticmethod
     def _sanitize_margin_ratio(df):
-        df["margin_ratios"] = np.where(df["margin_ratios"] > 1, 1, df["margin_ratios"])
-        df["margin_ratios"] = np.where(df["margin_ratios"] < 0, 1, df["margin_ratios"])
-        df["margin_ratios"] = np.where(df["side"] == 0, 0, df["margin_ratios"])
+        df[MARGIN_RATIO] = np.where(df[MARGIN_RATIO] > 1, 1, df[MARGIN_RATIO])
+        df[MARGIN_RATIO] = np.where(df[MARGIN_RATIO] < 0, 1, df[MARGIN_RATIO])
+        df[MARGIN_RATIO] = np.where(df[SIDE] == 0, 0, df[MARGIN_RATIO])
 
-        df["margin_ratios"] = df["margin_ratios"].fillna(0)
+        df[MARGIN_RATIO] = df[MARGIN_RATIO].fillna(0)
 
         return df
 
@@ -418,20 +426,20 @@ class BacktestMixin:
         """
 
         columns = [
-            "accumulated_returns",
-            "accumulated_strategy_returns",
-            "accumulated_strategy_returns_tc",
+            BUY_AND_HOLD,
+            CUM_SUM_STRATEGY,
+            CUM_SUM_STRATEGY_TC,
         ]
 
         data = processed_data.copy()[columns] * self.amount
 
         if self.include_margin:
-            data["margin_ratios"] = processed_data["margin_ratios"].copy() * 100
+            data[MARGIN_RATIO] = processed_data[MARGIN_RATIO].copy() * 100
 
         trades_df = pd.DataFrame(self.trades)
 
         if plot_results:
-            nr_strategies = len([col for col in processed_data.columns if "side" in col])
+            nr_strategies = len([col for col in processed_data.columns if SIDE in col])
             offset = max(0, nr_strategies - 2)
 
             title = self.__repr__()
@@ -524,7 +532,7 @@ class BacktestMixin:
         if self._original_data is None:
             self._original_data = self.strategy.data.copy()
 
-            position_columns = [col for col in self._original_data if "side" in col]
+            position_columns = [col for col in self._original_data if SIDE in col]
 
             self._original_data = self._original_data.drop(columns=position_columns)
 

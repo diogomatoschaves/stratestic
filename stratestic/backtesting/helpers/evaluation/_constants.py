@@ -1,5 +1,15 @@
 import humanfriendly
 
+
+STRATEGY_RETURNS = "strategy_returns"
+STRATEGY_RETURNS_TC = "strategy_returns_tc"
+BUY_AND_HOLD = "accumulated_returns"
+CUM_SUM_STRATEGY = "accumulated_strategy_returns"
+CUM_SUM_STRATEGY_TC = "accumulated_strategy_returns_tc"
+MARGIN_RATIO = "margin_ratio"
+SIDE = "side"
+CLOSE_DATE = "close_date"
+
 legend_mapping = {
     "accumulated_returns": "Buy & Hold",
     "accumulated_strategy_returns": "Strategy returns (no trading costs)",

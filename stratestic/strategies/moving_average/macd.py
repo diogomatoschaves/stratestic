@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from ta.trend import MACD
 
+from stratestic.backtesting.helpers.evaluation import SIDE
 from stratestic.strategies._mixin import StrategyMixin
 
 
@@ -120,7 +121,7 @@ class MovingAverageConvergenceDivergence(MACD, StrategyMixin):
         pd.DataFrame
             Dataframe containing side column.
         """
-        data["side"] = np.where(data["macd_diff"] > 0, 1, -1)
+        data[SIDE] = np.where(data["macd_diff"] > 0, 1, -1)
 
         return data
 

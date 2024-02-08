@@ -1,6 +1,8 @@
 import numpy as np
 from stratestic.backtesting._mixin import BacktestMixin
 from stratestic.backtesting.helpers import Trade
+from stratestic.backtesting.helpers.evaluation import STRATEGY_RETURNS, STRATEGY_RETURNS_TC, BUY_AND_HOLD, \
+    CUM_SUM_STRATEGY, CUM_SUM_STRATEGY_TC, MARGIN_RATIO, SIDE
 from stratestic.backtesting.helpers.margin import get_maintenance_margin, calculate_liquidation_price, calculate_margin_ratio
 
 
@@ -111,21 +113,21 @@ class VectorizedBacktester(BacktestMixin):
         """
         data = self.calculate_positions(data)
         data["trades"] = data.side.diff().fillna(0).abs()
-        data.loc[data.index[0], "trades"] = np.abs(data.iloc[0]["side"])
-        data.loc[data.index[-1], "trades"] = np.abs(data.iloc[-2]["side"])
-        data.loc[data.index[-1], "side"] = 0
+        data.loc[data.index[0], "trades"] = np.abs(data.iloc[0][SIDE])
+        data.loc[data.index[-1], "trades"] = np.abs(data.iloc[-2][SIDE])
+        data.loc[data.index[-1], SIDE] = 0
 
         data["trades"] = data["trades"].astype('int')
-        data["side"] = data["side"].astype('int')
+        data[SIDE] = data[SIDE].astype('int')
 
-        data["strategy_returns"] = (data.side.shift(1) * data.returns).fillna(0)
-        data["strategy_returns_tc"] = (data["strategy_returns"] - data["trades"] * self.tc).fillna(0)
+        data[STRATEGY_RETURNS] = (data.side.shift(1) * data.returns).fillna(0)
+        data[STRATEGY_RETURNS_TC] = (data[STRATEGY_RETURNS] - data["trades"] * self.tc).fillna(0)
 
         data.loc[data.index[0], "returns"] = 0
 
-        data["accumulated_returns"] = data[self.returns_col].cumsum().apply(np.exp).fillna(1)
-        data["accumulated_strategy_returns"] = data["strategy_returns"].cumsum().apply(np.exp).fillna(1)
-        data["accumulated_strategy_returns_tc"] = data["strategy_returns_tc"].cumsum().apply(np.exp).fillna(1)
+        data[BUY_AND_HOLD] = data[self.returns_col].cumsum().apply(np.exp).fillna(1)
+        data[CUM_SUM_STRATEGY] = data[STRATEGY_RETURNS].cumsum().apply(np.exp).fillna(1)
+        data[CUM_SUM_STRATEGY_TC] = data[STRATEGY_RETURNS_TC].cumsum().apply(np.exp).fillna(1)
 
         return data
 
@@ -155,7 +157,7 @@ class VectorizedBacktester(BacktestMixin):
 
         """
 
-        cols = [self.price_col, "side", "accumulated_strategy_returns"]
+        cols = [self.price_col, SIDE, CUM_SUM_STRATEGY]
 
         processed_data = processed_data.copy()
 
@@ -169,8 +171,8 @@ class VectorizedBacktester(BacktestMixin):
         col = list(set(trades.columns).difference(set(cols)))[0]
 
         trades = trades.rename(columns={self.price_col: "entry_price", col: "entry_date"})
-        trades["exit_price"] = trades["entry_price"].shift(-1) * (1 - trading_costs * trades["side"])
-        trades["entry_price"] = trades["entry_price"] * (1 + trading_costs * trades["side"])
+        trades["exit_price"] = trades["entry_price"].shift(-1) * (1 - trading_costs * trades[SIDE])
+        trades["entry_price"] = trades["entry_price"] * (1 + trading_costs * trades[SIDE])
         trades["exit_date"] = trades["entry_date"].shift(-1)
         trades = trades[trades.side != 0]
 
@@ -184,9 +186,9 @@ class VectorizedBacktester(BacktestMixin):
         trades = trades.dropna()
 
         trades["simple_return"] = (trades["exit_price"] - trades["entry_price"]) / trades["entry_price"]
-        trades["log_return"] = np.log(trades["exit_price"] / trades["entry_price"]) * trades["side"]
+        trades["log_return"] = np.log(trades["exit_price"] / trades["entry_price"]) * trades[SIDE]
 
-        trades["simple_cum"] = (trades["simple_return"] * trades["side"] + 1).cumprod()
+        trades["simple_cum"] = (trades["simple_return"] * trades[SIDE] + 1).cumprod()
         trades["log_cum"] = trades["log_return"].cumsum().apply(np.exp)
 
         if len(trades) > 0:
@@ -236,7 +238,7 @@ class VectorizedBacktester(BacktestMixin):
         df = processed_data.copy()
 
         if len(trades_df) == 0:
-            df["margin_ratios"] = 0
+            df[MARGIN_RATIO] = 0
             return df
 
         df['entry_price'] = None
@@ -257,7 +259,7 @@ class VectorizedBacktester(BacktestMixin):
         df['maintenance_rate'].ffill(inplace=True)
         df['maintenance_amount'].ffill(inplace=True)
 
-        df['margin_ratios'] = calculate_margin_ratio(
+        df[MARGIN_RATIO] = calculate_margin_ratio(
             self.leverage,
             df['units'],
             df['side'],
@@ -304,10 +306,10 @@ class VectorizedBacktester(BacktestMixin):
             self.processed_data = self._calculate_margin_ratio(self._trades_df, self.processed_data)
 
         # absolute performance of the strategy
-        perf = processed_data["accumulated_strategy_returns_tc"].iloc[-1]
+        perf = processed_data[CUM_SUM_STRATEGY_TC].iloc[-1]
 
         # out-/underperformance of strategy
-        outperf = perf - processed_data["accumulated_returns"].iloc[-1]
+        outperf = perf - processed_data[BUY_AND_HOLD].iloc[-1]
 
         results = self._get_results(self.trades, processed_data.copy())
 

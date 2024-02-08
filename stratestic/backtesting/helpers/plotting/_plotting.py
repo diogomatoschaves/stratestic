@@ -4,6 +4,7 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
 
+from stratestic.backtesting.helpers.evaluation import CUM_SUM_STRATEGY, CUM_SUM_STRATEGY_TC, BUY_AND_HOLD, MARGIN_RATIO
 from stratestic.backtesting.helpers.evaluation.metrics import get_drawdowns, get_dd_durations_limits
 
 pio.renderers.default = "browser"
@@ -92,8 +93,8 @@ def plot_backtest_results(
 def plot_margin_ratios(fig, data, margin_threshold):
 
     fig.add_trace(go.Scatter(
-        x=data["margin_ratios"].index,
-        y=data["margin_ratios"],
+        x=data[MARGIN_RATIO].index,
+        y=data[MARGIN_RATIO],
         name='Margin Ratio',
         line=dict(
             width=1.5,
@@ -102,8 +103,8 @@ def plot_margin_ratios(fig, data, margin_threshold):
     ), row=3, col=1)
 
     threshold = margin_threshold * 100
-    start = data["margin_ratios"].index[0]
-    end = data["margin_ratios"].index[-1]
+    start = data[MARGIN_RATIO].index[0]
+    end = data[MARGIN_RATIO].index[-1]
 
     fig.add_trace(go.Scatter(
         x=[start, end],
@@ -122,7 +123,7 @@ def plot_equity_curves(fig, data, show_plot_no_tc):
 
     fig.add_trace(go.Scatter(
         x=data.index,
-        y=data['accumulated_strategy_returns_tc'],
+        y=data[CUM_SUM_STRATEGY_TC],
         name='Equity',
         line=dict(
             width=1.5,
@@ -132,7 +133,7 @@ def plot_equity_curves(fig, data, show_plot_no_tc):
 
     fig.add_trace(go.Scatter(
         x=data.index,
-        y=data['accumulated_returns'],
+        y=data[BUY_AND_HOLD],
         name='Buy & Hold',
         line=dict(
             color='Silver',
@@ -143,7 +144,7 @@ def plot_equity_curves(fig, data, show_plot_no_tc):
     if show_plot_no_tc:
         fig.add_trace(go.Scatter(
             x=data.index,
-            y=data['accumulated_strategy_returns'],
+            y=data[CUM_SUM_STRATEGY],
             name='Equity (no trading costs)',
             line=dict(
                 width=0.8,
@@ -155,7 +156,7 @@ def plot_equity_curves(fig, data, show_plot_no_tc):
     freq = pd.infer_freq(data.index)
     close_date = data.index.shift(1, freq=freq)
 
-    durations, limits = get_dd_durations_limits(data['accumulated_strategy_returns_tc'], close_date)
+    durations, limits = get_dd_durations_limits(data[CUM_SUM_STRATEGY_TC], close_date)
 
     x = []
     y = []
@@ -163,7 +164,7 @@ def plot_equity_curves(fig, data, show_plot_no_tc):
         x.extend(limit)
         x.append(None)
 
-        value = data['accumulated_strategy_returns_tc'][limit[0]]
+        value = data[CUM_SUM_STRATEGY_TC][limit[0]]
 
         y.extend([value, value])
         y.append(None)
@@ -183,7 +184,7 @@ def plot_equity_curves(fig, data, show_plot_no_tc):
     max_duration_index = np.argmax(durations)
 
     start, end = limits[max_duration_index]
-    value = data['accumulated_strategy_returns_tc'][start]
+    value = data[CUM_SUM_STRATEGY_TC][start]
 
     fig.add_trace(go.Scatter(
         x=[start, end],
@@ -197,9 +198,9 @@ def plot_equity_curves(fig, data, show_plot_no_tc):
     ), row=1, col=1)
 
     # plot peak equity point
-    peak_index = data['accumulated_strategy_returns_tc'].argmax()
+    peak_index = data[CUM_SUM_STRATEGY_TC].argmax()
     peak_time = data.index[peak_index]
-    peak_value = data['accumulated_strategy_returns_tc'][peak_index]
+    peak_value = data[CUM_SUM_STRATEGY_TC][peak_index]
 
     fig.add_trace(go.Scatter(
         x=[peak_time],
@@ -213,9 +214,9 @@ def plot_equity_curves(fig, data, show_plot_no_tc):
     ), row=1, col=1)
 
     # Plot lowest equity point
-    low_index = data['accumulated_strategy_returns_tc'].argmin()
+    low_index = data[CUM_SUM_STRATEGY_TC].argmin()
     low_time = data.index[low_index]
-    low_value = data['accumulated_strategy_returns_tc'][low_index]
+    low_value = data[CUM_SUM_STRATEGY_TC][low_index]
 
     fig.add_trace(go.Scatter(
         x=[low_time],
@@ -229,11 +230,11 @@ def plot_equity_curves(fig, data, show_plot_no_tc):
     ), row=1, col=1)
 
     # Plot max drawdown
-    drawdowns = get_drawdowns(data['accumulated_strategy_returns_tc'])
+    drawdowns = get_drawdowns(data[CUM_SUM_STRATEGY_TC])
 
     max_drawdown_index = drawdowns.argmin()
     max_drawdown_time = drawdowns.index[max_drawdown_index]
-    max_drawdown_equity = data['accumulated_strategy_returns_tc'][max_drawdown_index]
+    max_drawdown_equity = data[CUM_SUM_STRATEGY_TC][max_drawdown_index]
     max_drawdown_value = drawdowns[max_drawdown_index]
 
     fig.add_trace(go.Scatter(

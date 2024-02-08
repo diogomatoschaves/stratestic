@@ -4,6 +4,9 @@ import numpy as np
 
 from stratestic.backtesting._mixin import BacktestMixin
 from stratestic.backtesting.helpers import Trade
+from stratestic.backtesting.helpers.evaluation import CUM_SUM_STRATEGY, CUM_SUM_STRATEGY_TC, BUY_AND_HOLD, \
+    STRATEGY_RETURNS, STRATEGY_RETURNS_TC
+from stratestic.backtesting.helpers.evaluation._constants import MARGIN_RATIO, SIDE
 from stratestic.backtesting.helpers.margin import calculate_margin_ratio, get_maintenance_margin, calculate_liquidation_price
 from stratestic.trading import Trader
 
@@ -223,7 +226,7 @@ class IterativeBacktester(BacktestMixin, Trader):
             previous_position = self._get_position(self.symbol)
 
             if bar != data.shape[0] - 1:
-                self.trade(self.symbol, signal, timestamp, row, amount="all", print_results=print_results)
+                self.trade(self.symbol, signal, timestamp, row, amount="all", print_results=print_results, backtesting=True)
             else:
                 self.close_pos(self.symbol, timestamp, row, print_results=print_results)
                 self._set_position(self.symbol, 0)
@@ -268,35 +271,36 @@ class IterativeBacktester(BacktestMixin, Trader):
 
         self.margin_ratios.append(margin_ratio)
 
-    def _evaluate_backtest(self, processed_data):
-        processed_data["side"] = self.positions[self.symbol][1:]
-        processed_data.loc[processed_data.index[0], "side"] = self.positions[self.symbol][1]
-        processed_data.loc[processed_data.index[0], self.returns_col] = 0
+    def _evaluate_backtest(self, data):
+        data[SIDE] = self.positions[self.symbol][1:]
+        data.loc[data.index[0], SIDE] = self.positions[self.symbol][1]
+        data.loc[data.index[0], self.returns_col] = 0
 
-        processed_data["strategy_returns"] = self.strategy_returns[self.symbol]
-        processed_data["strategy_returns_tc"] = self.strategy_returns_tc[self.symbol]
+        data[STRATEGY_RETURNS] = self.strategy_returns[self.symbol]
+        data[STRATEGY_RETURNS_TC] = self.strategy_returns_tc[self.symbol]
 
-        processed_data["accumulated_returns"] = processed_data[self.returns_col].cumsum().apply(np.exp)
-        processed_data["accumulated_strategy_returns"] = processed_data["strategy_returns"].cumsum().apply(np.exp)
-        processed_data["accumulated_strategy_returns_tc"] = processed_data["strategy_returns_tc"].cumsum().apply(np.exp)
+        data[BUY_AND_HOLD] = data[self.returns_col].cumsum().apply(np.exp)
+
+        data[CUM_SUM_STRATEGY] = data[STRATEGY_RETURNS].cumsum().apply(np.exp)
+        data[CUM_SUM_STRATEGY_TC] = data[STRATEGY_RETURNS_TC].cumsum().apply(np.exp)
 
         if self.include_margin:
-            processed_data["margin_ratios"] = self.margin_ratios
+            data[MARGIN_RATIO] = self.margin_ratios
 
-            processed_data = self._sanitize_margin_ratio(processed_data)
+            data = self._sanitize_margin_ratio(data)
 
-            processed_data.dropna(inplace=True)
+            data.dropna(inplace=True)
 
-        self.processed_data = processed_data
+        self.processed_data = data
 
         returns = [np.log(trade.exit_price / trade.entry_price) * trade.side for trade in self.trades]
         perf = np.exp(np.sum(returns))  # Performance with trading_costs
 
-        perf_bh = processed_data["accumulated_returns"].iloc[-1]
+        perf_bh = data["accumulated_returns"].iloc[-1]
 
         outperf = perf - perf_bh
 
-        results = self._get_results(self.trades, processed_data.copy())
+        results = self._get_results(self.trades, data.copy())
 
         return results, self.nr_trades, perf, outperf
 

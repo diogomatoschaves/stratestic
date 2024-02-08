@@ -18,7 +18,7 @@ fixtures = get_fixtures(current_path, keys=["in_margin", "out_margin"])
 
 cum_returns = "accumulated_strategy_returns"
 cum_returns_tc = "accumulated_strategy_returns_tc"
-margin_ratio = "margin_ratios"
+margin_ratio = "margin_ratio"
 
 
 class TestVectorizedBacktesterMargin:

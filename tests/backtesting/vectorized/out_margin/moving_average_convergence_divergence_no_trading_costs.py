@@ -29,7 +29,7 @@ expected_results = {
             "accumulated_returns": 1.0,
             "accumulated_strategy_returns": 1.0,
             "accumulated_strategy_returns_tc": 1.0,
-            "margin_ratios": 0.004,
+            "margin_ratio": 0.004,
         },
         {
             "close_time": Timestamp("2023-09-01 14:49:59.999000+0000", tz="UTC"),
@@ -50,7 +50,7 @@ expected_results = {
             "accumulated_returns": 1.0003968393852676,
             "accumulated_strategy_returns": 1.0003968393852676,
             "accumulated_strategy_returns_tc": 1.0003968393852676,
-            "margin_ratios": 0.004,
+            "margin_ratio": 0.004,
         },
         {
             "close_time": Timestamp("2023-09-01 14:54:59.999000+0000", tz="UTC"),
@@ -71,7 +71,7 @@ expected_results = {
             "accumulated_returns": 0.9995759213029578,
             "accumulated_strategy_returns": 0.9995759213029578,
             "accumulated_strategy_returns_tc": 0.9995759213029578,
-            "margin_ratios": 0.004007844535567837,
+            "margin_ratio": 0.004007844535567837,
         },
         {
             "close_time": Timestamp("2023-09-01 14:59:59.999000+0000", tz="UTC"),
@@ -92,7 +92,7 @@ expected_results = {
             "accumulated_returns": 1.0002366081395337,
             "accumulated_strategy_returns": 0.9989156708702213,
             "accumulated_strategy_returns_tc": 0.9989156708702213,
-            "margin_ratios": 0.004009515267046255,
+            "margin_ratio": 0.004009515267046255,
         },
         {
             "close_time": Timestamp("2023-09-01 15:04:59.999000+0000", tz="UTC"),
@@ -113,7 +113,7 @@ expected_results = {
             "accumulated_returns": 1.002155466324555,
             "accumulated_strategy_returns": 0.9970030160221413,
             "accumulated_strategy_returns_tc": 0.9970030160221413,
-            "margin_ratios": 0,
+            "margin_ratio": 0,
         },
     ],
     10: [
@@ -136,7 +136,7 @@ expected_results = {
             "accumulated_returns": 1.0,
             "accumulated_strategy_returns": 1.0,
             "accumulated_strategy_returns_tc": 1.0,
-            "margin_ratios": 0.0403266687889347,
+            "margin_ratio": 0.0403266687889347,
         },
         {
             "close_time": Timestamp("2023-09-01 14:49:59.999000+0000", tz="UTC"),
@@ -157,7 +157,7 @@ expected_results = {
             "accumulated_returns": 1.0003968393852676,
             "accumulated_strategy_returns": 1.0003968393852676,
             "accumulated_strategy_returns_tc": 1.0003968393852676,
-            "margin_ratios": 0.04057206500534813,
+            "margin_ratio": 0.04057206500534813,
         },
         {
             "close_time": Timestamp("2023-09-01 14:54:59.999000+0000", tz="UTC"),
@@ -178,7 +178,7 @@ expected_results = {
             "accumulated_returns": 0.9995759213029578,
             "accumulated_strategy_returns": 0.9995759213029578,
             "accumulated_strategy_returns_tc": 0.9995759213029578,
-            "margin_ratios": 0.040435290943430145,
+            "margin_ratio": 0.040435290943430145,
         },
         {
             "close_time": Timestamp("2023-09-01 14:59:59.999000+0000", tz="UTC"),
@@ -199,7 +199,7 @@ expected_results = {
             "accumulated_returns": 1.0002366081395337,
             "accumulated_strategy_returns": 0.9989156708702213,
             "accumulated_strategy_returns_tc": 0.9989156708702213,
-            "margin_ratios": 0.040529002487472494,
+            "margin_ratio": 0.040529002487472494,
         },
         {
             "close_time": Timestamp("2023-09-01 15:04:59.999000+0000", tz="UTC"),
@@ -220,7 +220,7 @@ expected_results = {
             "accumulated_returns": 1.002155466324555,
             "accumulated_strategy_returns": 0.9970030160221413,
             "accumulated_strategy_returns_tc": 0.9970030160221413,
-            "margin_ratios": 0,
+            "margin_ratio": 0,
         },
     ],
 }
