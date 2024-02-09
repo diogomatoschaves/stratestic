@@ -249,6 +249,18 @@ def plot_equity_curves(fig, data, show_plot_no_tc):
     ), row=1, col=1)
 
 
+def size_trade_markers(notional_value, min_marker_size=10, max_marker_size=35):
+
+    min_value = notional_value.min()
+    max_value = notional_value.max()
+
+    normalized = (notional_value - min_value) / (max_value - min_value)
+
+    marker_size = min_marker_size + normalized * (max_marker_size - min_marker_size)
+
+    return marker_size
+
+
 def plot_trades(fig, trades):
 
     if len(trades) > 0:
@@ -258,10 +270,8 @@ def plot_trades(fig, trades):
         # define a boolean column indicating if each trade is long or short
         trades['is_long'] = trades['side'].apply(lambda x: x > 0)
 
-        # define marker size as a percentage of side size
-        position_size = trades['units'] * trades["entry_price"]
-
-        marker_size = abs(position_size) / position_size.max() * 30
+        # define marker size accoridng to the trade size
+        marker_size = size_trade_markers(trades['units'] * trades["entry_price"])
 
         # create separate traces for long and short trades
         fig.add_trace(go.Scatter(
