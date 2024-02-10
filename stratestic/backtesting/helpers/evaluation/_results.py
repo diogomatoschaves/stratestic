@@ -21,11 +21,11 @@ def get_results(data, trades, leverage, amount, trading_costs=None, trading_days
 
     results = get_overview_results(results, data, leverage, trading_costs, amount)
 
-    results = get_returns_results(results, data, leverage, amount, trading_days)
+    results = get_returns_results(results, data, amount, trading_days)
 
     results = get_drawdown_results(results, data)
 
-    results = get_trades_results(results, trades, leverage)
+    results = get_trades_results(results, trades)
 
     results = get_ratios_results(results, data, trades, trading_days)
 
@@ -42,8 +42,8 @@ def get_overview_results(results, data, leverage, trading_costs, amount):
     if trading_costs is not None:
         results["trading_costs"] = trading_costs * 100
 
-    results["initial_equity"] = amount
-    results["exposed_capital"] = results["initial_equity"] / leverage
+    results["initial_equity"] = amount * leverage
+    results["exposed_capital"] = results["initial_equity"]
 
     if SIDE in data:
         results["exposure_time"] = exposure_time(data[SIDE])
@@ -51,18 +51,18 @@ def get_overview_results(results, data, leverage, trading_costs, amount):
     return results
 
 
-def get_returns_results(results, data, leverage, amount, trading_days):
+def get_returns_results(results, data, amount, trading_days):
     if CUM_SUM_STRATEGY_TC in data:
         results["equity_final"] = equity_final(data[CUM_SUM_STRATEGY_TC] * amount)
         results["equity_peak"] = equity_peak(data[CUM_SUM_STRATEGY_TC] * amount)
-        results["return_pct"] = return_pct(data[CUM_SUM_STRATEGY_TC]) * leverage
-        results["return_pct_annualized"] = return_pct_annualized(data[CUM_SUM_STRATEGY_TC], leverage)
+        results["return_pct"] = return_pct(data[CUM_SUM_STRATEGY_TC])
+        results["return_pct_annualized"] = return_pct_annualized(data[CUM_SUM_STRATEGY_TC])
 
         if STRATEGY_RETURNS_TC in data:
             results["volatility_pct_annualized"] = volatility_pct_annualized(data[STRATEGY_RETURNS_TC], trading_days)
 
         if "accumulated_returns" in data:
-            results["buy_and_hold_return"] = return_buy_and_hold_pct(data[BUY_AND_HOLD]) * leverage
+            results["buy_and_hold_return"] = return_buy_and_hold_pct(data[BUY_AND_HOLD])
 
         return results
 
@@ -77,15 +77,15 @@ def get_drawdown_results(results, data):
         return results
 
 
-def get_trades_results(results, trades, leverage):
+def get_trades_results(results, trades):
     results["nr_trades"] = int(len(trades))
     results["win_rate"] = win_rate_pct(trades)
-    results["best_trade"] = best_trade_pct(trades, leverage)
-    results["worst_trade"] = worst_trade_pct(trades, leverage)
-    results["avg_trade"] = avg_trade_pct(trades, leverage)
+    results["best_trade"] = best_trade_pct(trades)
+    results["worst_trade"] = worst_trade_pct(trades)
+    results["avg_trade"] = avg_trade_pct(trades)
     results["max_trade_duration"] = max_trade_duration(trades)
     results["avg_trade_duration"] = avg_trade_duration(trades)
-    results["expectancy"] = expectancy_pct(trades, leverage)
+    results["expectancy"] = expectancy_pct(trades)
 
     return results
 

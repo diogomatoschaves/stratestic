@@ -32,18 +32,17 @@ class Trade:
     exit_price: float
     units: float
     side: int
+    equity: float
     amount: float = None
     profit: float = None
     pnl: float = None
     liquidation_price: float = None
 
-    def calculate_profit(self):
-        self.profit = (np.exp(np.log(self.exit_price / self.entry_price) * self.side) - 1) \
-                      * self.units * self.entry_price
-
-    def calculate_pnl_pct(self, prev_amount, leverage):
-
+    def calculate_profit(self, prev_amount):
         if self.amount is None:
             return
 
-        self.pnl = (self.amount - prev_amount) / prev_amount * leverage
+        self.profit = self.amount - prev_amount
+
+    def calculate_pnl_pct(self, leverage):
+        self.pnl = (np.exp(np.log(self.exit_price / self.entry_price) * self.side) - 1) * leverage

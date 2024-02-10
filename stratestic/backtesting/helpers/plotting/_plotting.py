@@ -14,6 +14,7 @@ def plot_backtest_results(
     data,
     trades,
     margin_threshold,
+    index_frequency,
     offset=0,
     plot_margin_ratio=False,
     show_plot_no_tc=False,
@@ -37,6 +38,8 @@ def plot_backtest_results(
         - 'units': size of the side
     margin_threshold : float
         threshold for maximum allowed margin ratio
+    index_frequency : string
+        frequency of the index of the data
     offset : int
         Offset for vertical margin of the plot.
     plot_margin_ratio: bool, optional
@@ -56,7 +59,7 @@ def plot_backtest_results(
 
     fig = make_subplots(rows=number_rows, cols=1, shared_xaxes=True)
 
-    plot_equity_curves(fig, data, show_plot_no_tc)
+    plot_equity_curves(fig, data, show_plot_no_tc, index_frequency)
 
     plot_trades(fig, trades)
 
@@ -119,7 +122,7 @@ def plot_margin_ratios(fig, data, margin_threshold):
     ), row=3, col=1)
 
 
-def plot_equity_curves(fig, data, show_plot_no_tc):
+def plot_equity_curves(fig, data, show_plot_no_tc, index_frequency):
 
     fig.add_trace(go.Scatter(
         x=data.index,
@@ -153,8 +156,7 @@ def plot_equity_curves(fig, data, show_plot_no_tc):
         ), row=1, col=1)
 
     # plot drawdowns
-    freq = pd.infer_freq(data.index)
-    close_date = data.index.shift(1, freq=freq)
+    close_date = data.index.shift(1, freq=index_frequency)
 
     durations, limits = get_dd_durations_limits(data[CUM_SUM_STRATEGY_TC], close_date)
 
