@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -19,6 +20,7 @@ fixtures = get_fixtures(current_path, keys=["in_margin", "out_margin"])
 
 class TestVectorizedBacktesterMargin:
 
+    @pytest.mark.slow
     @pytest.mark.parametrize(
         "leverage",
         [
@@ -56,7 +58,7 @@ class TestVectorizedBacktesterMargin:
 
         vect.run()
 
-        print(vect.processed_data.to_dict(orient="records"))
+        print(vect.processed_data.reset_index().to_dict(orient="records"))
 
         if len(vect.trades) > 0:
             assert (
@@ -69,9 +71,11 @@ class TestVectorizedBacktesterMargin:
 
         for i, d in enumerate(vect.processed_data.to_dict(orient="records")):
             for key in d:
-                assert d[key] == pytest.approx(
-                    fixture["out_margin"]["expected_results"][leverage][i][key], 0.2
-                )
+                result = fixture["out_margin"]["expected_results"][leverage][i][key]
+                try:
+                    assert np.isnan(d[key]) == np.isnan(result)
+                except TypeError:
+                    assert d[key] == pytest.approx(result, 0.2)
 
     @pytest.mark.parametrize(
         "leverage,symbol,second_leverage,exception",

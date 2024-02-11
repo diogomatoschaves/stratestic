@@ -409,13 +409,17 @@ class BacktestMixin:
 
         return [Trade(**row) for _, row in trades_df.reset_index().iterrows()]
 
-    @staticmethod
-    def _sanitize_margin_ratio(df):
+    def _sanitize_margin_ratio(self, df):
         df[MARGIN_RATIO] = np.where(df[MARGIN_RATIO] > 1, 1, df[MARGIN_RATIO])
         df[MARGIN_RATIO] = np.where(df[MARGIN_RATIO] < 0, 1, df[MARGIN_RATIO])
         df[MARGIN_RATIO] = np.where(df[SIDE] == 0, 0, df[MARGIN_RATIO])
 
         df[MARGIN_RATIO] = df[MARGIN_RATIO].fillna(0)
+
+        greater_than_index = df[df[MARGIN_RATIO].ge(1)].index.shift(1, freq=self.index_frequency)
+
+        if len(greater_than_index) > 0:
+            df.loc[greater_than_index[0]:, MARGIN_RATIO] = np.nan
 
         return df
 
