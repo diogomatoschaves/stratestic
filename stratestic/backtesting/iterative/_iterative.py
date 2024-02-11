@@ -374,8 +374,8 @@ class IterativeBacktester(BacktestMixin, Trader):
             units = amount / price_tc
 
         if amount is None:
-            # The formula below comes from the computation: new_amount = prev_price / price * prev_amount,
-            # amount = 2 * prev_amount - new_amount, prev_amount = units * prev_price
+            # The formula below comes from the computation: amount = 2 * prev_amount - new_amount
+            # new_amount = prev_price / price * prev_amount, prev_amount = units * prev_price
             amount = self.trades[-1].entry_price * units * (2 - self.trades[-1].entry_price / price_tc)
 
         self.current_balance -= amount
