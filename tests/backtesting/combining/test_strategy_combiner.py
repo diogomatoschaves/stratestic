@@ -54,7 +54,7 @@ class TestStrategyCombiner:
         with pytest.raises(exception) as excinfo:
             StrategyCombiner(**input_params, data=test_data)
 
-            assert excinfo.type == exception
+        assert excinfo.type == exception
 
     @pytest.mark.parametrize(
         "input_params,expected_results",
@@ -108,6 +108,7 @@ class TestStrategyCombiner:
 
         assert combiner.data["side"].to_list() == expected_results
 
+    @pytest.mark.slow
     @pytest.mark.parametrize(
         "fixture",
         [
@@ -143,6 +144,7 @@ class TestStrategyCombiner:
 
         for i, d in enumerate(backtester.processed_data.to_dict(orient="records")):
             for key in d:
+                print(key)
                 assert d[key] == pytest.approx(
                     fixture["out"]["expected_results"][i][key], 0.2
                 )

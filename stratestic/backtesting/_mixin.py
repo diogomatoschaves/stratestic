@@ -263,7 +263,8 @@ class BacktestMixin:
         if margin_threshold is not None:
             self.set_margin_threshold(margin_threshold)
 
-        self._load_symbol_data()
+        self.include_margin = True
+        self._load_leverage_brackets()
 
         left_limit, right_limit = self.leverage_limits
 
@@ -374,6 +375,9 @@ class BacktestMixin:
 
     def _sanitize_equity(self, df, trades):
 
+        if len(trades) == 0:
+            return df
+
         trades_df = pd.DataFrame(trades)
 
         # Bring equity to 0 if a trade has gotten to zero equity
@@ -401,6 +405,8 @@ class BacktestMixin:
 
         trades_df = trades_df[trades_df.index < no_equity[0]].copy()
 
+        trades_df["pnl"] = np.where(trades_df["pnl"] < -1, -1, trades_df["pnl"])
+
         return [Trade(**row) for _, row in trades_df.reset_index().iterrows()]
 
     @staticmethod
@@ -410,6 +416,13 @@ class BacktestMixin:
         df[MARGIN_RATIO] = np.where(df[SIDE] == 0, 0, df[MARGIN_RATIO])
 
         df[MARGIN_RATIO] = df[MARGIN_RATIO].fillna(0)
+
+        return df
+
+    def _calculate_strategy_returns(self, df):
+        df[STRATEGY_RETURNS_TC] = np.log(df['equity'] / df['equity'].shift(1)).fillna(0)
+        df[STRATEGY_RETURNS] = df[STRATEGY_RETURNS_TC] + df["trades"] * self.tc
+        df.loc[df.index[0], STRATEGY_RETURNS] = 0
 
         return df
 

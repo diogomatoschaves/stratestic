@@ -9,16 +9,21 @@ from tests.setup.test_data.returns import cum_returns, returns, index
 def trades():
     # Generate some sample trades
     return [
-        Trade(entry_date=datetime(2022, 1, 1, 0, 0), exit_date=datetime(2022, 1, 3, 0, 0),
-              entry_price=10, exit_price=4, units=100, side=1, profit=-600),
-        Trade(entry_date=datetime(2022, 1, 2, 0, 0), exit_date=datetime(2022, 1, 4, 0, 0),
-              entry_price=12, exit_price=10, units=100, side=-1, profit=200),
-        Trade(entry_date=datetime(2022, 1, 3, 0, 0), exit_date=datetime(2022, 1, 5, 0, 0),
-              entry_price=11, exit_price=12, units=100, side=1, profit=100),
-        Trade(entry_date=datetime(2022, 1, 4, 0, 0), exit_date=datetime(2022, 1, 8, 0, 0),
-              entry_price=13, exit_price=14, units=100, side=-1, profit=-100),
-        Trade(entry_date=datetime(2022, 1, 5, 0, 0), exit_date=datetime(2022, 1, 10, 0, 0),
-              entry_price=12, exit_price=16, units=100, side=1, profit=400)
+        Trade(entry_date=datetime(2022, 1, 1, 0, 0),
+              exit_date=datetime(2022, 1, 3, 0, 0),
+              entry_price=10, exit_price=4, units=100, side=1, profit=-600, pnl=-0.4),
+        Trade(entry_date=datetime(2022, 1, 2, 0, 0),
+              exit_date=datetime(2022, 1, 4, 0, 0),
+              entry_price=12, exit_price=10, units=100, side=-1, profit=200, pnl=0.2),
+        Trade(entry_date=datetime(2022, 1, 3, 0, 0),
+              exit_date=datetime(2022, 1, 5, 0, 0),
+              entry_price=11, exit_price=12, units=100, side=1, profit=100, pnl=0.1),
+        Trade(entry_date=datetime(2022, 1, 4, 0, 0),
+              exit_date=datetime(2022, 1, 8, 0, 0),
+              entry_price=13, exit_price=14, units=100, side=-1, profit=-100, pnl=-0.1),
+        Trade(entry_date=datetime(2022, 1, 5, 0, 0),
+              exit_date=datetime(2022, 1, 10, 0, 0),
+              entry_price=12, exit_price=16, units=100, side=1, profit=400, pnl=0.4)
     ]
 
 
@@ -85,7 +90,7 @@ def test_annual_volatility_pct(log_returns):
 
 
 def test_sharpe_ratio(log_returns):
-    assert sharpe_ratio(log_returns, 0.01) == pytest.approx(-2, 1)
+    assert sharpe_ratio(log_returns, 0.01) == pytest.approx(3.84, 1)
 
 
 def test_sortino_ratio(log_returns):

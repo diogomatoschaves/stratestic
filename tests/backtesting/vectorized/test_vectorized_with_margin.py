@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 from stratestic.backtesting import VectorizedBacktester, IterativeBacktester
+from stratestic.backtesting.helpers.evaluation import CUM_SUM_STRATEGY, CUM_SUM_STRATEGY_TC, MARGIN_RATIO
 from stratestic.strategies import MovingAverage
 from stratestic.utils.exceptions import SymbolInvalid
 from stratestic.utils.exceptions.leverage_invalid import LeverageInvalid
@@ -16,15 +17,15 @@ current_path = os.path.dirname(os.path.realpath(__file__))
 fixtures = get_fixtures(current_path, keys=["in_margin", "out_margin"])
 
 
-cum_returns = "accumulated_strategy_returns"
-cum_returns_tc = "accumulated_strategy_returns_tc"
-margin_ratio = "margin_ratio"
-
-
 class TestVectorizedBacktesterMargin:
+
     @pytest.mark.parametrize(
         "leverage",
-        [pytest.param(1, id="leverage=1"), pytest.param(10, id="leverage=10")],
+        [
+            pytest.param(1, id="leverage=1"),
+            pytest.param(10, id="leverage=10"),
+            pytest.param(100, id="leverage=100")
+        ],
     )
     @pytest.mark.parametrize(
         "fixture",
@@ -50,7 +51,6 @@ class TestVectorizedBacktesterMargin:
             symbol="BTCUSDT",
             amount=amount,
             trading_costs=trading_costs,
-            include_margin=True,
             leverage=leverage,
         )
 
@@ -60,11 +60,12 @@ class TestVectorizedBacktesterMargin:
 
         if len(vect.trades) > 0:
             assert (
-                round(vect.trades[0].profit / vect.trades[0].pnl * leverage) == amount
+                round(vect.trades[0].profit / vect.trades[0].pnl) == amount
             )
 
-        for trade in vect.trades:
-            assert trade.liquidation_price is not None
+        if leverage > 1:
+            for trade in vect.trades:
+                assert trade.liquidation_price is not None
 
         for i, d in enumerate(vect.processed_data.to_dict(orient="records")):
             for key in d:
@@ -76,7 +77,7 @@ class TestVectorizedBacktesterMargin:
         "leverage,symbol,second_leverage,exception",
         [
             pytest.param(-1, "BTCUSDT", 1, LeverageInvalid, id="invalid_leverage"),
-            pytest.param(1, "Invalid Symbol", 1, SymbolInvalid, id="invalid_symbol"),
+            pytest.param(10, "Invalid Symbol", 1, SymbolInvalid, id="invalid_symbol"),
             pytest.param(
                 1, "BTCUSDT", -1, LeverageInvalid, id="invalid_leverage_on_run"
             ),
@@ -91,7 +92,7 @@ class TestVectorizedBacktesterMargin:
         with pytest.raises(exception):
 
             vect = VectorizedBacktester(
-                strategy, symbol=symbol, include_margin=True, leverage=leverage
+                strategy, symbol=symbol, leverage=leverage
             )
 
             vect.run(leverage=second_leverage)
@@ -122,7 +123,6 @@ class TestVectorizedBacktesterMargin:
             strategy_instance,
             symbol="BTCUSDT",
             trading_costs=trading_costs,
-            include_margin=True,
             leverage=leverage,
         )
 
@@ -130,7 +130,6 @@ class TestVectorizedBacktesterMargin:
             strategy_instance,
             symbol="BTCUSDT",
             trading_costs=trading_costs,
-            include_margin=True,
             leverage=leverage,
         )
 
@@ -142,33 +141,28 @@ class TestVectorizedBacktesterMargin:
 
         pd.testing.assert_series_equal(vect.results, ite.results)
         pd.testing.assert_series_equal(
-            vect.processed_data[cum_returns], ite.processed_data[cum_returns]
+            vect.processed_data[CUM_SUM_STRATEGY], ite.processed_data[CUM_SUM_STRATEGY]
         )
         pd.testing.assert_series_equal(
-            vect.processed_data[cum_returns_tc], ite.processed_data[cum_returns_tc]
+            vect.processed_data[CUM_SUM_STRATEGY_TC], ite.processed_data[CUM_SUM_STRATEGY_TC]
         )
-        pd.testing.assert_series_equal(
-            vect.processed_data[margin_ratio], ite.processed_data[margin_ratio]
-        )
+        if leverage != 1:
+            pd.testing.assert_series_equal(
+                vect.processed_data[MARGIN_RATIO], ite.processed_data[MARGIN_RATIO]
+            )
+
         pd.testing.assert_frame_equal(trades_vect, trades_ite)
 
     @pytest.mark.parametrize(
-        "include_margin",
-        [
-            pytest.param(True, id="include_margin=True"),
-            pytest.param(False, id="include_margin=False")
-        ],
-    )
-    @pytest.mark.parametrize(
         "margin_threshold, expected_result",
         [
-            pytest.param(0.1, 23, id="margin_threshold=0.1"),
-            pytest.param(0.5, 91, id="margin_threshold=0.5"),
+            pytest.param(0.1, 24, id="margin_threshold=0.1"),
+            pytest.param(0.5, 93, id="margin_threshold=0.5"),
             pytest.param(1, 124, id="margin_threshold=1")
         ],
     )
     def test_maximum_leverage(
-        self, include_margin, margin_threshold, expected_result, mocked_plotly_figure_show
+        self, margin_threshold, expected_result, mocked_plotly_figure_show
     ):
         test_data = data.set_index("open_time")
 
@@ -177,7 +171,7 @@ class TestVectorizedBacktesterMargin:
         vect = VectorizedBacktester(
             strategy_instance,
             symbol="BTCUSDT",
-            include_margin=include_margin,
+            leverage=2,
         )
 
         result = vect.maximum_leverage(margin_threshold=margin_threshold)

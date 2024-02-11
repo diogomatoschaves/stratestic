@@ -21,10 +21,6 @@ def get_end_date(close_date: pd.Series) -> datetime:
     return close_date[-1]
 
 
-def calculate_multiple(cum_returns: pd.Series, leverage: int = 1) -> float:
-    return cum_returns[-1] / cum_returns[0] * leverage
-
-
 def exposure_time(positions: np.ndarray) -> float:
     """Calculate the percentage of time the strategy was exposed to the market."""
     return np.count_nonzero(positions) / len(positions) * 100
@@ -221,10 +217,6 @@ def win_rate_pct(trades: List[Trade]) -> float:
     nr_trades = len(trades)
 
     return winning_trades / nr_trades * 100 if nr_trades > 0 else 0
-
-
-def calculate_pnl(trade):
-    return np.exp(np.log(trade.exit_price / trade.entry_price) * trade.side) - 1
 
 
 def best_trade_pct(trades: List[Trade]) -> float:

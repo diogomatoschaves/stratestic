@@ -1,4 +1,4 @@
-from stratestic.backtesting import VectorizedBacktester
+from stratestic.backtesting import IterativeBacktester
 from stratestic.strategies import MovingAverageCrossover, Momentum, BollingerBands
 
 strategy_1 = MovingAverageCrossover(2, 6)
@@ -9,4 +9,4 @@ strategies = [strategy_1, strategy_2, strategy_3]
 
 method = "Unanimous"
 
-backtester = VectorizedBacktester
+backtester = IterativeBacktester

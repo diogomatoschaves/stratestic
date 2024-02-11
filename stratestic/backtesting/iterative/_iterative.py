@@ -104,19 +104,10 @@ class IterativeBacktester(BacktestMixin, Trader):
         self.margin_ratios = []
         self.nr_trades = 0
         self.trades = []
+        self.initial_balance = self.amount * self.leverage
         self.current_balance = self.initial_balance
+        self.current_equity = self.amount
         self.units = 0
-
-    def _get_trades(self, _):
-        """
-        Gets the number of trades executed.
-
-        Returns
-        -------
-        int
-            The number of trades executed.
-        """
-        return self.nr_trades
 
     def _get_price(self, _, row):
         """
@@ -238,21 +229,23 @@ class IterativeBacktester(BacktestMixin, Trader):
             trades = np.abs(signal - previous_position)
 
             if self.include_margin:
-                new_trade = trades >= 1 and previous_position != 0
+                new_trade = trades >= 1
                 self._calculate_margin_ratio(row, new_trade)
 
-            self.strategy_returns[self.symbol].append(row[self.returns_col] * previous_position)
-            self.strategy_returns_tc[self.symbol].append(self.strategy_returns[self.symbol][-1] - trades * self.tc)
+            strategy_return = row[self.returns_col] * previous_position - trades * self.tc
 
-            pnl = (np.exp(self.strategy_returns_tc[self.symbol][-1]) - 1) * amount
+            simple_return = np.exp(strategy_return) - 1
+
+            pnl = simple_return * amount
 
             equity = equity + pnl
+
+            self.equity.append(equity)
+
             if trades >= 1 and previous_position != 0:
                 amount = equity * self.leverage
             else:
                 amount = amount + pnl
-
-            self.equity.append(equity)
 
     def _iterative_backtest(self, data, print_results=True):
         """
@@ -282,6 +275,7 @@ class IterativeBacktester(BacktestMixin, Trader):
             data = self._sanitize_margin_ratio(data)
 
         data = self._sanitize_equity(data, self.trades)
+        data = self._add_trades_rows(data)
         data = self._calculate_strategy_returns(data)
         data = self._calculate_cumulative_returns(data)
         trades = self._sanitize_trades(data, self.trades)
@@ -289,9 +283,9 @@ class IterativeBacktester(BacktestMixin, Trader):
         return data, trades
 
     @staticmethod
-    def _calculate_strategy_returns(data):
-        data[STRATEGY_RETURNS_TC] = np.log(data['equity'] / data['equity'].shift(1)).fillna(0)
-        data[STRATEGY_RETURNS] = data[STRATEGY_RETURNS_TC].copy()
+    def _add_trades_rows(data):
+        data["trades"] = np.abs(data[SIDE].diff())
+        data.loc[data.index[0], "trades"] = np.abs(data.loc[data.index[0], SIDE] - 0)
 
         return data
 
@@ -310,8 +304,8 @@ class IterativeBacktester(BacktestMixin, Trader):
             trade.side,
             trade.entry_price,
             mark_price,
-            self.maintenance_rate,
-            self.maintenance_amount,
+            trade.maintenance_rate,
+            trade.maintenance_amount,
             exchange=self.exchange
         )
 
@@ -331,25 +325,6 @@ class IterativeBacktester(BacktestMixin, Trader):
         results = self._get_results(self.trades, data.copy())
 
         return results, self.nr_trades, perf, outperf
-
-    def _get_net_value(self, row):
-        """
-        Calculate the current net value of the strategy.
-
-        Parameters
-        ----------
-        row : pandas.Series
-            The current row of the data being processed.
-
-        Returns
-        -------
-        float
-            The current net value of the strategy.
-
-        """
-        price = self._get_price("", row)
-
-        return self.current_balance + self.units * price
 
     def buy_instrument(
         self,
@@ -541,7 +516,8 @@ class IterativeBacktester(BacktestMixin, Trader):
 
     def _handle_trade(self, trades, open_trade, date, price, units, equity, amount, side):
         if open_trade:
-            liquidation_price = None
+
+            trades.append(Trade(date, None, price, None, units, side))
 
             if self.include_margin:
 
@@ -550,9 +526,6 @@ class IterativeBacktester(BacktestMixin, Trader):
                 maintenance_rate, maintenance_amount = get_maintenance_margin(
                     self._symbol_bracket, [notional_value], exchange=self.exchange
                 )
-
-                self.maintenance_rate = maintenance_rate[0]
-                self.maintenance_amount = maintenance_amount[0]
 
                 liquidation_price = calculate_liquidation_price(
                     units,
@@ -564,14 +537,16 @@ class IterativeBacktester(BacktestMixin, Trader):
                     exchange=self.exchange
                 )[0]
 
-            trades.append(Trade(date, None, price, None, units, side, None, None, None, None, liquidation_price))
+                trades[-1].liquidation_price = liquidation_price
+                trades[-1].maintenance_rate = maintenance_rate[0]
+                trades[-1].maintenance_amount = maintenance_amount[0]
         else:
             trades[-1].exit_date = date
             trades[-1].exit_price = price
             trades[-1].equity = equity
             trades[-1].amount = amount
 
-            trades[-1].calculate_profit(trades[-2].amount if len(trades) >= 2 else self.amount * self.leverage)
+            trades[-1].calculate_profit(trades[-2].equity if len(trades) >= 2 else self.amount)
             trades[-1].calculate_pnl_pct(self.leverage)
 
             self.nr_trades += 1

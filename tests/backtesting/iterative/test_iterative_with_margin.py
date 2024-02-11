@@ -54,7 +54,6 @@ class TestIterativeBacktesterMargin:
             symbol='BTCUSDT',
             amount=amount,
             trading_costs=trading_costs,
-            include_margin=True,
             leverage=leverage
         )
 
@@ -62,13 +61,15 @@ class TestIterativeBacktesterMargin:
 
         print(ite.processed_data.to_dict(orient="records"))
 
-        assert round(ite.trades[0].profit / ite.trades[0].pnl * leverage) == amount
+        assert round(ite.trades[0].profit / ite.trades[0].pnl) == amount
 
-        for trade in ite.trades:
-            assert trade.liquidation_price is not None
+        if leverage > 1:
+            for trade in ite.trades:
+                assert trade.liquidation_price is not None
 
         for i, d in enumerate(ite.processed_data.to_dict(orient="records")):
             for key in d:
+                print(key)
                 assert d[key] == pytest.approx(
                     fixture["out_margin"]["expected_results"][leverage][i][key], 0.2
                 )
@@ -84,7 +85,7 @@ class TestIterativeBacktesterMargin:
                 id='invalid_leverage'
             ),
             pytest.param(
-                1,
+                10,
                 'Invalid Symbol',
                 1,
                 SymbolInvalid,
@@ -108,29 +109,21 @@ class TestIterativeBacktesterMargin:
             ite = IterativeBacktester(
                 strategy,
                 symbol=symbol,
-                include_margin=True,
                 leverage=leverage
             )
 
             ite.run(leverage=second_leverage)
 
     @pytest.mark.parametrize(
-        "include_margin",
-        [
-            pytest.param(True, id="include_margin=True"),
-            pytest.param(False, id="include_margin=False")
-        ],
-    )
-    @pytest.mark.parametrize(
         "margin_threshold, expected_result",
         [
-            pytest.param(0.1, 23, id="margin_threshold=0.1"),
-            pytest.param(0.5, 91, id="margin_threshold=0.5"),
+            pytest.param(0.1, 24, id="margin_threshold=0.1"),
+            pytest.param(0.5, 93, id="margin_threshold=0.5"),
             pytest.param(1, 124, id="margin_threshold=1")
         ],
     )
     def test_maximum_leverage(
-        self, include_margin, margin_threshold, expected_result, mocked_plotly_figure_show
+        self, margin_threshold, expected_result, mocked_plotly_figure_show
     ):
         test_data = data.set_index("open_time")
 
@@ -139,7 +132,6 @@ class TestIterativeBacktesterMargin:
         ite = IterativeBacktester(
             strategy_instance,
             symbol="BTCUSDT",
-            include_margin=include_margin,
         )
 
         result = ite.maximum_leverage(margin_threshold=margin_threshold)

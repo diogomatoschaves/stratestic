@@ -146,6 +146,10 @@ class VectorizedBacktester(BacktestMixin):
 
         df.loc[df.index[0], self.returns_col] = 0
 
+        if len(trades_df) == 0:
+            df["equity"] = 0
+            return df
+
         df_filter = (df.trades != 0) & (df.side != 0)
 
         df.loc[df[df_filter].index, 'notional_value'] = trades_df["equity"].shift(1).values
@@ -161,9 +165,6 @@ class VectorizedBacktester(BacktestMixin):
         amount = self.amount * self.leverage
         for index, row in df.iterrows():
 
-            if index == Timestamp("2023-02-13 00:00:00"):
-                a = 1
-
             pnl = (np.exp(row[STRATEGY_RETURNS_TC]) - 1) * amount
 
             equity = equity + pnl
@@ -178,13 +179,6 @@ class VectorizedBacktester(BacktestMixin):
             df.loc[index, 'amount'] = amount
 
         df.drop(columns=['pnl', 'amount', 'notional_value'], inplace=True)
-
-        return df
-
-    def _calculate_strategy_returns(self, df):
-        df[STRATEGY_RETURNS_TC] = np.log(df['equity'] / df['equity'].shift(1)).fillna(0)
-        df[STRATEGY_RETURNS] = df[STRATEGY_RETURNS_TC] + df["trades"] * self.tc
-        df.loc[df.index[0], STRATEGY_RETURNS] = 0
 
         return df
 
@@ -255,7 +249,7 @@ class VectorizedBacktester(BacktestMixin):
 
             equity = self.amount
             for index, trade in trades.iterrows():
-                pnl = (np.exp(trade["log_return"]) - 1) * self.leverage # - self.tc * 2 * trade[SIDE]
+                pnl = (np.exp(trade["log_return"]) - 1) * self.leverage
 
                 equity = equity * (1 + pnl)
                 amount = equity * self.leverage
@@ -291,8 +285,6 @@ class VectorizedBacktester(BacktestMixin):
                 trades['maintenance_amount'],
                 exchange=self.exchange
             )
-
-            columns_to_delete.extend(['maintenance_rate', 'maintenance_amount'])
 
         self._trades_df = trades.copy()
 

@@ -16,10 +16,10 @@ legend_mapping = {
     "accumulated_strategy_returns_tc": "Strategy returns (with trading costs)"
 }
 results_mapping = {
-    'initial_equity': lambda unit: f"Traded Initial Amount [{unit}]",
-    'exposed_capital': lambda unit: f"Exposed Capital [{unit}]",
-    'equity_final': lambda unit: f"Equity Final [{unit}]",
-    'equity_peak': lambda unit: f"Equity Peak [{unit}]",
+    'traded_amount': lambda unit: f"Traded Amount [{unit}]",
+    'equity_initial': lambda unit: f"Equity - Initial [{unit}]",
+    'equity_final': lambda unit: f"Equity - Final [{unit}]",
+    'equity_peak': lambda unit: f"Equity - Peak [{unit}]",
     'trading_costs': "Trading Costs [%]",
     'leverage': "Leverage [x]",
     'buy_and_hold_return': "Buy & Hold Return [%]",
@@ -57,9 +57,9 @@ results_aesthetics = {
 }
 
 results_sections = {
-    'Overview': ['total_duration', 'start_date', 'end_date', 'trading_costs',
-                 'leverage', 'initial_equity', 'exposed_capital', 'exposure_time'],
-    'Returns': ['return_pct', 'equity_final', 'equity_peak', 'return_pct_annualized',
+    'Overview': ['total_duration', 'start_date', 'end_date', 'trading_costs', 'exposure_time',
+                 'leverage', 'equity_initial', 'equity_final', 'equity_peak'],
+    'Returns': ['return_pct', 'return_pct_annualized',
                 'volatility_pct_annualized', 'buy_and_hold_return', ],
     'Drawdowns': ['max_drawdown', 'avg_drawdown', 'max_drawdown_duration', 'avg_drawdown_duration'],
     'Trades': ['nr_trades', 'win_rate', 'best_trade', 'worst_trade', 'avg_trade',

@@ -42,8 +42,8 @@ def get_overview_results(results, data, leverage, trading_costs, amount):
     if trading_costs is not None:
         results["trading_costs"] = trading_costs * 100
 
-    results["initial_equity"] = amount * leverage
-    results["exposed_capital"] = results["initial_equity"]
+    results["equity_initial"] = amount
+    results["traded_amount"] = amount * leverage
 
     if SIDE in data:
         results["exposure_time"] = exposure_time(data[SIDE])
@@ -106,7 +106,7 @@ def get_ratios_results(results, data, trades, trading_days):
 
 def log_results(results, backtesting=True):
 
-    length = 55
+    length = 60
 
     logging.info("")
 
@@ -142,7 +142,7 @@ def log_results(results, backtesting=True):
                 except TypeError:
                     value = str(value)
 
-            logging.info(f'{printed_title:<30}{value.rjust(25)}')
+            logging.info(f'{printed_title:<30}{value.rjust(30)}')
         logging.info('-' * length)
         logging.info('')
     logging.info('*' * length)

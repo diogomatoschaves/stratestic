@@ -258,6 +258,8 @@ def size_trade_markers(notional_value, min_marker_size=10, max_marker_size=35):
 
     normalized = (notional_value - min_value) / (max_value - min_value)
 
+    normalized = pd.Series(np.where(normalized, np.isnan(normalized), 0.5))
+
     marker_size = min_marker_size + normalized * (max_marker_size - min_marker_size)
 
     return marker_size
