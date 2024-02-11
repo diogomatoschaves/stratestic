@@ -117,6 +117,7 @@ class Trader:
 
         position = self._get_position(symbol)
         print_results = kwargs.get('print_results')
+        backtesting = kwargs.get('backtesting')
 
         if signal == 1:  # signal to go long
             if position in [0, -1]:
@@ -136,7 +137,7 @@ class Trader:
                 self.sell_instrument(symbol, date, row, units=units, header=header, reducing=True, **kwargs)
 
         if position == signal:
-            if print_results:
+            if print_results and not backtesting:
 
                 verbose_position = "LONG" if position == 1 else "SHORT" if position == -1 else "NEUTRAL"
 

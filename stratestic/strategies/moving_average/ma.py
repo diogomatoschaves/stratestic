@@ -4,6 +4,7 @@ from typing import Literal
 import numpy as np
 from ta.trend import sma_indicator, ema_indicator
 
+from stratestic.backtesting.helpers.evaluation import SIDE
 from stratestic.strategies._mixin import StrategyMixin
 
 
@@ -101,8 +102,8 @@ class MovingAverage(StrategyMixin):
         pd.DataFrame
             OHLCV data with additional 'side' column containing -1 for short, 1 for long.
         """
-        data["side"] = np.where(data["SMA"] < data[self.close_col], 1, 0)
-        data["side"] = np.where(data["SMA"] > data[self.close_col], -1, data["side"])
+        data[SIDE] = np.where(data["SMA"] < data[self.close_col], 1, 0)
+        data[SIDE] = np.where(data["SMA"] > data[self.close_col], -1, data[SIDE])
         return data
 
     def get_signal(self, row=None):

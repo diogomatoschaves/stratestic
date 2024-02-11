@@ -26,17 +26,11 @@ def get_maintenance_margin(symbol_brackets, notional_value, exchange='binance'):
         Internal function for calculating maintenance margin for Binance exchange.
         """
 
-        # values = pd.concat([pd.DataFrame(notional_value).T] * len(notional_value)).T
-        #
-        # triangular_matrix = pd.DataFrame(np.tril(values))
-
         values = pd.Series(notional_value)
 
         comparison = pd.DataFrame()
         for i, notional_floor in enumerate(symbol_brackets['notionalFloor']):
             comparison[i] = values >= notional_floor
-
-        # greater_than = triangular_matrix.gt(symbol_brackets["notionalFloor"], axis=1)
 
         indexes = comparison.idxmin(axis=1) - 1
 

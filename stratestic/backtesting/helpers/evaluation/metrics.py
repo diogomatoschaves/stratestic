@@ -6,15 +6,7 @@ import numpy as np
 import pandas as pd
 
 from stratestic.backtesting.helpers import Trade
-
-
-def geometric_mean(returns: pd.Series) -> float:
-    returns = returns.fillna(0) + 1
-
-    if np.any(returns <= 0):
-        return np.nan
-
-    return np.exp(np.log(returns).sum() / (len(returns) or np.nan)) - 1
+from stratestic.utils.helpers import geometric_mean
 
 
 def get_total_duration(index: pd.DatetimeIndex, close_date: pd.Series) -> timedelta:
@@ -49,33 +41,39 @@ def return_pct(equity_curve: pd.Series) -> float:
     return (equity_curve.iloc[-1] / equity_curve.iloc[0] - 1) * 100
 
 
-def return_buy_and_hold_pct(returns: pd.Series) -> float:
+def return_buy_and_hold_pct(cum_returns: pd.Series) -> float:
     """Retrieve the buy and hold return pct."""
-    return (returns[-1] - 1) * 100
+    return (cum_returns[-1] - 1) * 100
 
 
-def return_pct_annualized(cum_returns: pd.Series, leverage=1) -> float:
+def return_pct_annualized(cum_returns: pd.Series) -> float:
     """Calculate the annualized return percentage."""
 
     years_df = cum_returns.resample('1Y').count()
 
-    return ((cum_returns[-1] / cum_returns[0] * leverage)**(1 / len(years_df))-1) * 100
+    return ((cum_returns[-1] / cum_returns[0])**(1 / len(years_df))-1) * 100
 
 
 def volatility_pct_annualized(returns: pd.Series, trading_days: int = 365) -> float:
     """Calculate the annualized volatility percentage."""
 
-    days_df = returns.resample('1D').sum()
+    daily_returns = returns.resample('1D').sum()
 
-    return np.std(days_df) * np.sqrt(trading_days) * 100
+    return np.std(daily_returns) * np.sqrt(trading_days) * 100
 
 
 def sharpe_ratio(returns: pd.Series, risk_free_rate: float = 0, trading_days: int = 365) -> float:
     """Calculate the Sharpe ratio."""
-    excess_returns = returns - risk_free_rate
-    excess_returns_dev = np.std(excess_returns)
 
-    return np.mean(excess_returns) / excess_returns_dev * np.sqrt(trading_days) if excess_returns_dev != 0 else np.nan
+    # returns must be converted to daily returns
+
+    daily_returns = returns.resample('1D').sum()
+
+    excess_returns = daily_returns - risk_free_rate
+    excess_returns_mean = excess_returns.mean()
+    excess_returns_std = excess_returns.std()
+
+    return excess_returns_mean / excess_returns_std * np.sqrt(trading_days) if excess_returns_std != 0 else np.nan
 
 
 def sortino_ratio(returns: pd.Series, target_return: float = 0, risk_free_rate: float = 0) -> float:
@@ -221,31 +219,25 @@ def win_rate_pct(trades: List[Trade]) -> float:
     return winning_trades / nr_trades * 100 if nr_trades > 0 else 0
 
 
-def calculate_pnl(trade):
-    return np.exp(np.log(trade.exit_price / trade.entry_price) * trade.side) - 1
-
-
-def best_trade_pct(trades: List[Trade], leverage=1) -> float:
+def best_trade_pct(trades: List[Trade]) -> float:
     """Calculate the percentage of the best trade."""
 
     def reducer(accum, trade):
-        pnl = calculate_pnl(trade)
-        return pnl if pnl > accum else accum
+        return trade.pnl if trade.pnl > accum else accum
 
     best_trade = reduce(
         reducer,
         trades,
         0
     )
-    return best_trade * leverage * 100
+    return best_trade * 100
 
 
-def worst_trade_pct(trades: List[Trade], leverage=1) -> float:
+def worst_trade_pct(trades: List[Trade]) -> float:
     """Calculate the percentage of the worst trade."""
 
     def reducer(accum, trade):
-        pnl = calculate_pnl(trade)
-        return pnl if pnl < accum else accum
+        return trade.pnl if trade.pnl < accum else accum
 
     worst_trade = reduce(
         reducer,
@@ -253,14 +245,14 @@ def worst_trade_pct(trades: List[Trade], leverage=1) -> float:
         0
     )
 
-    return worst_trade * leverage * 100
+    return worst_trade * 100
 
 
-def avg_trade_pct(trades: List[Trade], leverage=1) -> float:
+def avg_trade_pct(trades: List[Trade]) -> float:
     """Calculate the average trade percentage."""
     trades_pct = map(
         # lambda trade: (trade.exit_price - trade.entry_price) * leverage / trade.entry_price * trade.side,
-        lambda trade: calculate_pnl(trade) * leverage,
+        lambda trade: trade.pnl,
         trades
     )
 
@@ -326,18 +318,18 @@ def trades_net_profit(trades: List[Trade]) -> List[float]:
     ))
 
 
-def expectancy_pct(trades: List[Trade], leverage: int = 1) -> float:
+def expectancy_pct(trades: List[Trade]) -> float:
     """Calculate the expectancy percentage."""
     win_trades = winning_trades(trades)
     lose_trades = losing_trades(trades)
     if len(lose_trades) == 0:
-        return avg_trade_pct(win_trades, leverage)
+        return avg_trade_pct(win_trades)
     elif len(win_trades) == 0:
-        return avg_trade_pct(lose_trades, leverage)
+        return avg_trade_pct(lose_trades)
     else:
         win_rate = win_rate_pct(trades) / 100
-        avg_win = avg_trade_pct(win_trades, leverage) / 100
-        avg_loss = avg_trade_pct(lose_trades, leverage) / 100
+        avg_win = avg_trade_pct(win_trades) / 100
+        avg_loss = avg_trade_pct(lose_trades) / 100
         return (win_rate * avg_win - (1 - win_rate) * avg_loss) * 100
 
 

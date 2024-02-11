@@ -1,7 +1,15 @@
 import numpy as np
+import pandas as pd
+from pandas import Timestamp
+
 from stratestic.backtesting._mixin import BacktestMixin
 from stratestic.backtesting.helpers import Trade
+from stratestic.backtesting.helpers.evaluation import STRATEGY_RETURNS, STRATEGY_RETURNS_TC, BUY_AND_HOLD, \
+    CUM_SUM_STRATEGY_TC, MARGIN_RATIO, SIDE
 from stratestic.backtesting.helpers.margin import get_maintenance_margin, calculate_liquidation_price, calculate_margin_ratio
+
+np.seterr(divide='ignore')
+np.seterr(invalid='ignore')
 
 
 class VectorizedBacktester(BacktestMixin):
@@ -14,7 +22,6 @@ class VectorizedBacktester(BacktestMixin):
         symbol=None,
         amount=1000,
         trading_costs=0.0,
-        include_margin=False,
         leverage=1,
         margin_threshold=0.8
     ):
@@ -31,8 +38,6 @@ class VectorizedBacktester(BacktestMixin):
             The initial amount of currency available for trading. Default is 1000.
         trading_costs : float
             The trading cost per trade as a percentage of the value being traded.
-        include_margin : bool, optional
-            Flag indicating whether margin trading is included in the backtest. Default is False.
         leverage : float, optional
             The initial leverage to apply for margin trading. Default is 1.
         margin_threshold : float, optional
@@ -51,7 +56,7 @@ class VectorizedBacktester(BacktestMixin):
         >>> backtester = VectorizedBacktester(strategy=strategy, symbol='BTCUSDT', amount=5000, trading_costs=0.01)
         """
 
-        BacktestMixin.__init__(self, symbol, amount, trading_costs, include_margin, leverage, margin_threshold)
+        BacktestMixin.__init__(self, symbol, amount, trading_costs, leverage, margin_threshold)
 
         self.strategy = strategy
 
@@ -86,9 +91,9 @@ class VectorizedBacktester(BacktestMixin):
         if data.empty:
             return 0, 0
 
-        processed_data = self._vectorized_backtest(data)
+        data, trades = self._vectorized_backtest(data)
 
-        results, nr_trades, perf, outperf = self._evaluate_backtest(processed_data)
+        results, nr_trades, perf, outperf = self._evaluate_backtest(data, trades)
 
         self.print_results(results, print_results)
 
@@ -111,23 +116,71 @@ class VectorizedBacktester(BacktestMixin):
         """
         data = self.calculate_positions(data)
         data["trades"] = data.side.diff().fillna(0).abs()
-        data.loc[data.index[0], "trades"] = np.abs(data.iloc[0]["side"])
-        data.loc[data.index[-1], "trades"] = np.abs(data.iloc[-2]["side"])
-        data.loc[data.index[-1], "side"] = 0
+        data.loc[data.index[0], "trades"] = np.abs(data.iloc[0][SIDE])
+        data.loc[data.index[-1], "trades"] = np.abs(data.iloc[-2][SIDE])
+        data.loc[data.index[-1], SIDE] = 0
 
         data["trades"] = data["trades"].astype('int')
-        data["side"] = data["side"].astype('int')
+        data[SIDE] = data[SIDE].astype('int')
 
-        data["strategy_returns"] = (data.side.shift(1) * data.returns).fillna(0)
-        data["strategy_returns_tc"] = (data["strategy_returns"] - data["trades"] * self.tc).fillna(0)
+        data[STRATEGY_RETURNS] = (data.side.shift(1) * data.returns).fillna(0)
+        data[STRATEGY_RETURNS_TC] = (data[STRATEGY_RETURNS] - data["trades"] * self.tc).fillna(0)
 
-        data.loc[data.index[0], "returns"] = 0
+        trades = self._retrieve_trades(data, self.tc)
 
-        data["accumulated_returns"] = data[self.returns_col].cumsum().apply(np.exp).fillna(1)
-        data["accumulated_strategy_returns"] = data["strategy_returns"].cumsum().apply(np.exp).fillna(1)
-        data["accumulated_strategy_returns_tc"] = data["strategy_returns_tc"].cumsum().apply(np.exp).fillna(1)
+        if self.include_margin:
+            data = self._calculate_margin_ratio(self._trades_df, data)
+            data = self._sanitize_margin_ratio(data)
 
-        return data
+        data = self.process_leveraged_returns(data, self._trades_df)
+        data = self._sanitize_equity(data, trades)
+        data = self._calculate_strategy_returns(data)
+        data = self._calculate_cumulative_returns(data)
+        trades = self._sanitize_trades(data, trades)
+
+        return data, trades
+
+    def process_leveraged_returns(self, processed_data, trades_df):
+
+        df = processed_data.copy()
+
+        df.loc[df.index[0], self.returns_col] = 0
+
+        if len(trades_df) == 0:
+            df["equity"] = 0
+            return df
+
+        df_filter = (df.trades != 0) & (df.side != 0)
+
+        df.loc[df[df_filter].index, 'notional_value'] = trades_df["equity"].shift(1).values
+        df.loc[df.index[0], 'notional_value'] = self.amount
+        df['notional_value'].ffill(inplace=True)
+
+        df["pnl"] = np.nan
+        df["equity"] = np.nan
+        df["amount"] = np.nan
+
+        equity = self.amount
+        notional_value = self.amount
+        amount = self.amount * self.leverage
+        for index, row in df.iterrows():
+
+            pnl = (np.exp(row[STRATEGY_RETURNS_TC]) - 1) * amount
+
+            equity = equity + pnl
+            if row["notional_value"] != notional_value:
+                amount = equity * self.leverage
+                notional_value = row["notional_value"]
+            else:
+                amount = amount + pnl
+
+            df.loc[index, 'pnl'] = pnl
+            df.loc[index, 'equity'] = equity
+            df.loc[index, 'amount'] = amount
+
+        df.drop(columns=['pnl', 'amount', 'notional_value'], inplace=True)
+
+        return df
 
     def _retrieve_trades(self, processed_data, trading_costs=0):
         """
@@ -155,7 +208,7 @@ class VectorizedBacktester(BacktestMixin):
 
         """
 
-        cols = [self.price_col, "side", "accumulated_strategy_returns"]
+        cols = [self.price_col, SIDE]
 
         processed_data = processed_data.copy()
 
@@ -169,8 +222,8 @@ class VectorizedBacktester(BacktestMixin):
         col = list(set(trades.columns).difference(set(cols)))[0]
 
         trades = trades.rename(columns={self.price_col: "entry_price", col: "entry_date"})
-        trades["exit_price"] = trades["entry_price"].shift(-1) * (1 - trading_costs * trades["side"])
-        trades["entry_price"] = trades["entry_price"] * (1 + trading_costs * trades["side"])
+        trades["exit_price"] = trades["entry_price"].shift(-1) * (1 - trading_costs * trades[SIDE])
+        trades["entry_price"] = trades["entry_price"] * (1 + trading_costs * trades[SIDE])
         trades["exit_date"] = trades["entry_date"].shift(-1)
         trades = trades[trades.side != 0]
 
@@ -183,26 +236,38 @@ class VectorizedBacktester(BacktestMixin):
         trades = trades.reset_index(drop=True)
         trades = trades.dropna()
 
-        trades["simple_return"] = (trades["exit_price"] - trades["entry_price"]) / trades["entry_price"]
-        trades["log_return"] = np.log(trades["exit_price"] / trades["entry_price"]) * trades["side"]
-
-        trades["simple_cum"] = (trades["simple_return"] * trades["side"] + 1).cumprod()
+        trades["log_return"] = np.log(trades["exit_price"] / trades["entry_price"]) * trades[SIDE]
         trades["log_cum"] = trades["log_return"].cumsum().apply(np.exp)
 
-        if len(trades) > 0:
-            trades["amount"] = self.amount * trades["log_cum"]
-            trades["units"] = (trades["amount"].shift(1) / trades["entry_price"]).fillna(self.amount / trades["entry_price"][0])
-            trades["profit"] = (trades["amount"] - trades["amount"].shift(1)).fillna(trades["amount"][0] - self.amount)
-            trades["pnl"] = ((trades["amount"] - trades["amount"].shift(1)) / trades["amount"].shift(1))\
-                .fillna((trades["amount"][0] - self.amount) / self.amount) * self.leverage
+        leveraged_amount = self.amount * self.leverage
 
-        columns_to_delete = [
-                'simple_return',
-                'simple_cum',
-                'log_return',
-                'log_cum',
-                'accumulated_strategy_returns',
-            ]
+        if len(trades) > 0:
+
+            trades["pnl"] = None
+            trades["equity"] = None
+            trades["amount"] = None
+
+            equity = self.amount
+            for index, trade in trades.iterrows():
+                pnl = (np.exp(trade["log_return"]) - 1) * self.leverage
+
+                equity = equity * (1 + pnl)
+                amount = equity * self.leverage
+
+                trades.loc[index, 'pnl'] = pnl
+                trades.loc[index, 'equity'] = equity
+                trades.loc[index, 'amount'] = amount
+
+            no_funds_left_index = trades["equity"][trades["equity"].le(0)].index
+            if len(no_funds_left_index) > 0:
+                trades.loc[no_funds_left_index[0]:, "equity"] = 0
+                trades.loc[no_funds_left_index[0]:, "amount"] = 0
+                trades.loc[no_funds_left_index[0] + 1:, "pnl"] = 0
+
+            trades["units"] = (trades["amount"].shift(1) / trades["entry_price"]).fillna(leveraged_amount / trades["entry_price"][0])
+            trades["profit"] = (trades["equity"] - trades["equity"].shift(1)).fillna(trades["equity"][0] - self.amount)
+
+        columns_to_delete = ['log_return', 'log_cum']
 
         if self.include_margin and len(trades) > 0:
             trades['maintenance_rate'], trades['maintenance_amount'] = get_maintenance_margin(
@@ -221,8 +286,6 @@ class VectorizedBacktester(BacktestMixin):
                 exchange=self.exchange
             )
 
-            columns_to_delete.extend(['maintenance_rate', 'maintenance_amount'])
-
         self._trades_df = trades.copy()
 
         trades.drop(columns_to_delete, axis=1, inplace=True)
@@ -236,14 +299,14 @@ class VectorizedBacktester(BacktestMixin):
         df = processed_data.copy()
 
         if len(trades_df) == 0:
-            df["margin_ratios"] = 0
+            df[MARGIN_RATIO] = 0
             return df
 
         df['entry_price'] = None
         df['units'] = None
         df['maintenance_rate'] = None
         df['maintenance_amount'] = None
-        df['mark_price'] = np.where(df['side'] == 1, df[self.low_col], df[self.high_col])
+        df['mark_price'] = np.where(df['side'].shift(1) == 1, df[self.low_col], df[self.high_col])
 
         df_filter = (df.trades != 0) & (df.side != 0)
 
@@ -257,14 +320,14 @@ class VectorizedBacktester(BacktestMixin):
         df['maintenance_rate'].ffill(inplace=True)
         df['maintenance_amount'].ffill(inplace=True)
 
-        df['margin_ratios'] = calculate_margin_ratio(
+        df[MARGIN_RATIO] = calculate_margin_ratio(
             self.leverage,
-            df['units'],
-            df['side'],
-            df['entry_price'],
+            df['units'].shift(1),
+            df['side'].shift(1),
+            df['entry_price'].shift(1),
             df['mark_price'],
-            df['maintenance_rate'],
-            df['maintenance_amount'],
+            df['maintenance_rate'].shift(1),
+            df['maintenance_amount'].shift(1),
             exchange=self.exchange
         )
 
@@ -273,11 +336,9 @@ class VectorizedBacktester(BacktestMixin):
             axis=1, inplace=True
         )
 
-        df = self._sanitize_margin_ratio(df)
-
         return df
 
-    def _evaluate_backtest(self, processed_data):
+    def _evaluate_backtest(self, processed_data, trades):
         """
        Evaluates the performance of the trading strategy on the backtest run.
 
@@ -295,19 +356,15 @@ class VectorizedBacktester(BacktestMixin):
        """
 
         self.processed_data = processed_data
+        self.trades = trades
 
         nr_trades = self._get_nr_trades(processed_data)
 
-        self.trades = self._retrieve_trades(processed_data, self.tc)
-
-        if self.include_margin:
-            self.processed_data = self._calculate_margin_ratio(self._trades_df, self.processed_data)
-
         # absolute performance of the strategy
-        perf = processed_data["accumulated_strategy_returns_tc"].iloc[-1]
+        perf = processed_data[CUM_SUM_STRATEGY_TC].iloc[-1]
 
         # out-/underperformance of strategy
-        outperf = perf - processed_data["accumulated_returns"].iloc[-1]
+        outperf = perf - processed_data[BUY_AND_HOLD].iloc[-1]
 
         results = self._get_results(self.trades, processed_data.copy())
 

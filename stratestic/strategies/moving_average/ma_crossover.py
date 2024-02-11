@@ -4,6 +4,7 @@ from typing import Literal
 import numpy as np
 from ta.trend import ema_indicator, sma_indicator
 
+from stratestic.backtesting.helpers.evaluation import SIDE
 from stratestic.strategies._mixin import StrategyMixin
 
 
@@ -126,7 +127,7 @@ class MovingAverageCrossover(StrategyMixin):
         pandas.DataFrame:
             The input DataFrame with an additional 'side' column containing the calculated side values.
         """
-        data["side"] = np.where(data["SMA_S"] > data["SMA_L"], 1, -1)
+        data[SIDE] = np.where(data["SMA_S"] > data["SMA_L"], 1, -1)
 
         return data
 

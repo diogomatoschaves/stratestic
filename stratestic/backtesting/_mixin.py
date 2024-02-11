@@ -9,7 +9,16 @@ from scipy.optimize import brute
 import plotly.io as pio
 
 from stratestic.backtesting.combining import StrategyCombiner
-from stratestic.backtesting.helpers.evaluation import get_results, log_results
+from stratestic.backtesting.helpers import Trade
+from stratestic.backtesting.helpers.evaluation import (
+    get_results,
+    log_results,
+    BUY_AND_HOLD,
+    CUM_SUM_STRATEGY,
+    CUM_SUM_STRATEGY_TC,
+    MARGIN_RATIO,
+    SIDE, STRATEGY_RETURNS_TC, STRATEGY_RETURNS
+)
 from stratestic.backtesting.helpers.plotting import plot_backtest_results
 from stratestic.utils.config_parser import get_config
 from stratestic.utils.exceptions import StrategyRequired, OptimizationParametersInvalid, SymbolInvalid, LeverageInvalid
@@ -56,9 +65,8 @@ class BacktestMixin:
         symbol,
         amount,
         trading_costs,
-        include_margin=False,
         leverage=1,
-        margin_threshold=0.8,
+        margin_threshold=0.9,
         exchange='binance'
     ):
         """
@@ -109,8 +117,9 @@ class BacktestMixin:
         self.outperf = 0
         self.results = None
 
-        if include_margin:
-            self.set_include_margin()
+        if self.leverage != 1:
+            self.include_margin = True
+            self._load_leverage_brackets()
 
     def __getattr__(self, attr):
         """
@@ -149,16 +158,6 @@ class BacktestMixin:
             self.margin_threshold = margin_threshold
         else:
             raise ValueError('Margin threshold must be between 0 and 1.')
-
-    def set_include_margin(self):
-        self.include_margin = True
-
-        brackets = self._load_leverage_brackets()
-
-        try:
-            self._symbol_bracket = pd.DataFrame(brackets[self.symbol])
-        except KeyError:
-            raise SymbolInvalid(self.symbol)
 
     def load_data(self, data=None, csv_path=None):
         if data is None or csv_path:
@@ -264,7 +263,8 @@ class BacktestMixin:
         if margin_threshold is not None:
             self.set_margin_threshold(margin_threshold)
 
-        self.set_include_margin()
+        self.include_margin = True
+        self._load_leverage_brackets()
 
         left_limit, right_limit = self.leverage_limits
 
@@ -280,7 +280,7 @@ class BacktestMixin:
                 break
 
             self._test_strategy(leverage=leverage, print_results=False, plot_results=False)
-            if self.processed_data["margin_ratios"].max() >= self.margin_threshold:
+            if self.processed_data[MARGIN_RATIO].max() >= self.margin_threshold:
                 right_limit = leverage
             else:
                 left_limit = leverage
@@ -309,6 +309,8 @@ class BacktestMixin:
             self.set_leverage(leverage)
 
         self._fix_original_data()
+
+        self.index_frequency = self._original_data.index.inferred_freq
 
         self.set_parameters(params, data=self._original_data.copy())
 
@@ -370,22 +372,72 @@ class BacktestMixin:
             strategy_params, optimization_steps = self._get_optimization_input(params, self.strategy)
 
             return strategy_params, None, optimization_steps
-        
-    @staticmethod
-    def _sanitize_margin_ratio(df):
-        df["margin_ratios"] = np.where(df["margin_ratios"] > 1, 1, df["margin_ratios"])
-        df["margin_ratios"] = np.where(df["margin_ratios"] < 0, 1, df["margin_ratios"])
-        df["margin_ratios"] = np.where(df["side"] == 0, 0, df["margin_ratios"])
 
-        df["margin_ratios"] = df["margin_ratios"].fillna(0)
+    def _sanitize_equity(self, df, trades):
+
+        if len(trades) == 0:
+            return df
+
+        trades_df = pd.DataFrame(trades)
+
+        # Bring equity to 0 if a trade has gotten to zero equity
+        no_funds_left_index = trades_df[trades_df["equity"].le(0)]["exit_date"]
+        if len(no_funds_left_index) > 0:
+            df.loc[no_funds_left_index.iloc[0]:, 'equity'] = 0
+
+        # Bring equity to 0 if a margin call happens
+        if self.include_margin:
+            no_funds_left_index = df[df[MARGIN_RATIO] >= 1].index
+
+            if len(no_funds_left_index) > 0:
+                df.loc[no_funds_left_index[0]:, 'equity'] = 0
 
         return df
 
+    @staticmethod
+    def _sanitize_trades(data, trades):
+        no_equity = data[CUM_SUM_STRATEGY_TC][data[CUM_SUM_STRATEGY_TC].le(0)].index
+
+        if len(no_equity) == 0:
+            return trades
+
+        trades_df = pd.DataFrame(trades).set_index('entry_date')
+
+        trades_df = trades_df[trades_df.index < no_equity[0]].copy()
+
+        trades_df["pnl"] = np.where(trades_df["pnl"] < -1, -1, trades_df["pnl"])
+
+        return [Trade(**row) for _, row in trades_df.reset_index().iterrows()]
+
+    @staticmethod
+    def _sanitize_margin_ratio(df):
+        df[MARGIN_RATIO] = np.where(df[MARGIN_RATIO] > 1, 1, df[MARGIN_RATIO])
+        df[MARGIN_RATIO] = np.where(df[MARGIN_RATIO] < 0, 1, df[MARGIN_RATIO])
+        df[MARGIN_RATIO] = np.where(df[SIDE] == 0, 0, df[MARGIN_RATIO])
+
+        df[MARGIN_RATIO] = df[MARGIN_RATIO].fillna(0)
+
+        return df
+
+    def _calculate_strategy_returns(self, df):
+        df[STRATEGY_RETURNS_TC] = np.log(df['equity'] / df['equity'].shift(1)).fillna(0)
+        df[STRATEGY_RETURNS] = df[STRATEGY_RETURNS_TC] + df["trades"] * self.tc
+        df.loc[df.index[0], STRATEGY_RETURNS] = 0
+
+        return df
+
+    def _calculate_cumulative_returns(self, data):
+        data[BUY_AND_HOLD] = data[self.returns_col].cumsum().apply(np.exp).fillna(1)
+        data[CUM_SUM_STRATEGY_TC] = data[STRATEGY_RETURNS_TC].cumsum().apply(np.exp).fillna(1)
+
+        if STRATEGY_RETURNS in data.columns:
+            data[CUM_SUM_STRATEGY] = data[STRATEGY_RETURNS].cumsum().apply(np.exp).fillna(1)
+
+        return data
+
     def _get_results(self, trades, processed_data):
 
-        freq = pd.infer_freq(processed_data.index)
-
-        processed_data["close_date"] = processed_data.index.shift(1, freq=freq)
+        processed_data["close_date"] = processed_data.index.shift(1, freq=self.index_frequency)
 
         return get_results(
             processed_data,
@@ -418,20 +470,20 @@ class BacktestMixin:
         """
 
         columns = [
-            "accumulated_returns",
-            "accumulated_strategy_returns",
-            "accumulated_strategy_returns_tc",
+            BUY_AND_HOLD,
+            CUM_SUM_STRATEGY,
+            CUM_SUM_STRATEGY_TC,
         ]
 
         data = processed_data.copy()[columns] * self.amount
 
         if self.include_margin:
-            data["margin_ratios"] = processed_data["margin_ratios"].copy() * 100
+            data[MARGIN_RATIO] = processed_data[MARGIN_RATIO].copy() * 100
 
         trades_df = pd.DataFrame(self.trades)
 
         if plot_results:
-            nr_strategies = len([col for col in processed_data.columns if "side" in col])
+            nr_strategies = len([col for col in processed_data.columns if SIDE in col])
             offset = max(0, nr_strategies - 2)
 
             title = self.__repr__()
@@ -440,6 +492,7 @@ class BacktestMixin:
                 data,
                 trades_df,
                 self.margin_threshold,
+                self.index_frequency,
                 offset,
                 plot_margin_ratio=self.include_margin,
                 show_plot_no_tc=show_plot_no_tc,
@@ -524,12 +577,11 @@ class BacktestMixin:
         if self._original_data is None:
             self._original_data = self.strategy.data.copy()
 
-            position_columns = [col for col in self._original_data if "side" in col]
+            position_columns = [col for col in self._original_data if SIDE in col]
 
             self._original_data = self._original_data.drop(columns=position_columns)
 
-    @staticmethod
-    def _load_leverage_brackets():
+    def _load_leverage_brackets(self):
 
         filepath = config_vars.leverage_brackets_file
         with open(filepath, 'r') as f:
@@ -537,4 +589,7 @@ class BacktestMixin:
 
         brackets = {symbol["symbol"]: symbol["brackets"] for symbol in data}
 
-        return brackets
+        try:
+            self._symbol_bracket = pd.DataFrame(brackets[self.symbol])
+        except KeyError:
+            raise SymbolInvalid(self.symbol)

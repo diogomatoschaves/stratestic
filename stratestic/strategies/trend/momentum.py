@@ -1,5 +1,6 @@
 import numpy as np
 
+from stratestic.backtesting.helpers.evaluation import SIDE
 from stratestic.strategies._mixin import StrategyMixin
 from collections import OrderedDict
 
@@ -86,7 +87,7 @@ class Momentum(StrategyMixin):
         pd.DataFrame
             Dataframe with the positions of the strategy.
         """
-        data["side"] = np.sign(data["rolling_returns"])
+        data[SIDE] = np.sign(data["rolling_returns"])
 
         return data
 

@@ -4,6 +4,7 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
 
+from stratestic.backtesting.helpers.evaluation import CUM_SUM_STRATEGY, CUM_SUM_STRATEGY_TC, BUY_AND_HOLD, MARGIN_RATIO
 from stratestic.backtesting.helpers.evaluation.metrics import get_drawdowns, get_dd_durations_limits
 
 pio.renderers.default = "browser"
@@ -13,6 +14,7 @@ def plot_backtest_results(
     data,
     trades,
     margin_threshold,
+    index_frequency,
     offset=0,
     plot_margin_ratio=False,
     show_plot_no_tc=False,
@@ -36,6 +38,8 @@ def plot_backtest_results(
         - 'units': size of the side
     margin_threshold : float
         threshold for maximum allowed margin ratio
+    index_frequency : string
+        frequency of the index of the data
     offset : int
         Offset for vertical margin of the plot.
     plot_margin_ratio: bool, optional
@@ -55,7 +59,7 @@ def plot_backtest_results(
 
     fig = make_subplots(rows=number_rows, cols=1, shared_xaxes=True)
 
-    plot_equity_curves(fig, data, show_plot_no_tc)
+    plot_equity_curves(fig, data, show_plot_no_tc, index_frequency)
 
     plot_trades(fig, trades)
 
@@ -92,8 +96,8 @@ def plot_backtest_results(
 def plot_margin_ratios(fig, data, margin_threshold):
 
     fig.add_trace(go.Scatter(
-        x=data["margin_ratios"].index,
-        y=data["margin_ratios"],
+        x=data[MARGIN_RATIO].index,
+        y=data[MARGIN_RATIO],
         name='Margin Ratio',
         line=dict(
             width=1.5,
@@ -102,8 +106,8 @@ def plot_margin_ratios(fig, data, margin_threshold):
     ), row=3, col=1)
 
     threshold = margin_threshold * 100
-    start = data["margin_ratios"].index[0]
-    end = data["margin_ratios"].index[-1]
+    start = data[MARGIN_RATIO].index[0]
+    end = data[MARGIN_RATIO].index[-1]
 
     fig.add_trace(go.Scatter(
         x=[start, end],
@@ -118,11 +122,11 @@ def plot_margin_ratios(fig, data, margin_threshold):
     ), row=3, col=1)
 
 
-def plot_equity_curves(fig, data, show_plot_no_tc):
+def plot_equity_curves(fig, data, show_plot_no_tc, index_frequency):
 
     fig.add_trace(go.Scatter(
         x=data.index,
-        y=data['accumulated_strategy_returns_tc'],
+        y=data[CUM_SUM_STRATEGY_TC],
         name='Equity',
         line=dict(
             width=1.5,
@@ -132,7 +136,7 @@ def plot_equity_curves(fig, data, show_plot_no_tc):
 
     fig.add_trace(go.Scatter(
         x=data.index,
-        y=data['accumulated_returns'],
+        y=data[BUY_AND_HOLD],
         name='Buy & Hold',
         line=dict(
             color='Silver',
@@ -143,7 +147,7 @@ def plot_equity_curves(fig, data, show_plot_no_tc):
     if show_plot_no_tc:
         fig.add_trace(go.Scatter(
             x=data.index,
-            y=data['accumulated_strategy_returns'],
+            y=data[CUM_SUM_STRATEGY],
             name='Equity (no trading costs)',
             line=dict(
                 width=0.8,
@@ -152,10 +156,9 @@ def plot_equity_curves(fig, data, show_plot_no_tc):
         ), row=1, col=1)
 
     # plot drawdowns
-    freq = pd.infer_freq(data.index)
-    close_date = data.index.shift(1, freq=freq)
+    close_date = data.index.shift(1, freq=index_frequency)
 
-    durations, limits = get_dd_durations_limits(data['accumulated_strategy_returns_tc'], close_date)
+    durations, limits = get_dd_durations_limits(data[CUM_SUM_STRATEGY_TC], close_date)
 
     x = []
     y = []
@@ -163,7 +166,7 @@ def plot_equity_curves(fig, data, show_plot_no_tc):
         x.extend(limit)
         x.append(None)
 
-        value = data['accumulated_strategy_returns_tc'][limit[0]]
+        value = data[CUM_SUM_STRATEGY_TC][limit[0]]
 
         y.extend([value, value])
         y.append(None)
@@ -183,7 +186,7 @@ def plot_equity_curves(fig, data, show_plot_no_tc):
     max_duration_index = np.argmax(durations)
 
     start, end = limits[max_duration_index]
-    value = data['accumulated_strategy_returns_tc'][start]
+    value = data[CUM_SUM_STRATEGY_TC][start]
 
     fig.add_trace(go.Scatter(
         x=[start, end],
@@ -197,9 +200,9 @@ def plot_equity_curves(fig, data, show_plot_no_tc):
     ), row=1, col=1)
 
     # plot peak equity point
-    peak_index = data['accumulated_strategy_returns_tc'].argmax()
+    peak_index = data[CUM_SUM_STRATEGY_TC].argmax()
     peak_time = data.index[peak_index]
-    peak_value = data['accumulated_strategy_returns_tc'][peak_index]
+    peak_value = data[CUM_SUM_STRATEGY_TC][peak_index]
 
     fig.add_trace(go.Scatter(
         x=[peak_time],
@@ -213,9 +216,9 @@ def plot_equity_curves(fig, data, show_plot_no_tc):
     ), row=1, col=1)
 
     # Plot lowest equity point
-    low_index = data['accumulated_strategy_returns_tc'].argmin()
+    low_index = data[CUM_SUM_STRATEGY_TC].argmin()
     low_time = data.index[low_index]
-    low_value = data['accumulated_strategy_returns_tc'][low_index]
+    low_value = data[CUM_SUM_STRATEGY_TC][low_index]
 
     fig.add_trace(go.Scatter(
         x=[low_time],
@@ -229,11 +232,11 @@ def plot_equity_curves(fig, data, show_plot_no_tc):
     ), row=1, col=1)
 
     # Plot max drawdown
-    drawdowns = get_drawdowns(data['accumulated_strategy_returns_tc'])
+    drawdowns = get_drawdowns(data[CUM_SUM_STRATEGY_TC])
 
     max_drawdown_index = drawdowns.argmin()
     max_drawdown_time = drawdowns.index[max_drawdown_index]
-    max_drawdown_equity = data['accumulated_strategy_returns_tc'][max_drawdown_index]
+    max_drawdown_equity = data[CUM_SUM_STRATEGY_TC][max_drawdown_index]
     max_drawdown_value = drawdowns[max_drawdown_index]
 
     fig.add_trace(go.Scatter(
@@ -248,6 +251,20 @@ def plot_equity_curves(fig, data, show_plot_no_tc):
     ), row=1, col=1)
 
 
+def size_trade_markers(notional_value, min_marker_size=10, max_marker_size=35):
+
+    min_value = notional_value.min()
+    max_value = notional_value.max()
+
+    normalized = (notional_value - min_value) / (max_value - min_value)
+
+    normalized = pd.Series(np.where(normalized, np.isnan(normalized), 0.5))
+
+    marker_size = min_marker_size + normalized * (max_marker_size - min_marker_size)
+
+    return marker_size
+
+
 def plot_trades(fig, trades):
 
     if len(trades) > 0:
@@ -257,10 +274,8 @@ def plot_trades(fig, trades):
         # define a boolean column indicating if each trade is long or short
         trades['is_long'] = trades['side'].apply(lambda x: x > 0)
 
-        # define marker size as a percentage of side size
-        position_size = trades['units'] * trades["entry_price"]
-
-        marker_size = abs(position_size) / position_size.max() * 30
+        # define marker size accoridng to the trade size
+        marker_size = size_trade_markers(trades['units'] * trades["entry_price"])
 
         # create separate traces for long and short trades
         fig.add_trace(go.Scatter(

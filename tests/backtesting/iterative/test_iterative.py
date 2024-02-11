@@ -23,6 +23,7 @@ cum_returns_tc = "accumulated_strategy_returns_tc"
 
 
 class TestIterativeBacktester:
+
     @pytest.mark.parametrize(
         "fixture",
         [
