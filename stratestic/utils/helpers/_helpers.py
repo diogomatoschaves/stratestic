@@ -1,6 +1,5 @@
 import re
 
-import numpy as np
 import pandas as pd
 
 escapes = ''.join([chr(char) for char in range(1, 32)])
@@ -15,15 +14,6 @@ def get_extended_name(name):
 
 def clean_docstring(doc):
     return doc.translate(translator).strip()
-
-
-# def geometric_mean_2(series: pd.Series) -> float:
-#     series = series.fillna(0) + 1
-#
-#     if np.any(series <= 0):
-#         return np.nan
-#
-#     return np.exp(np.log(series).sum() / (len(series) or np.nan)) - 1
 
 
 def geometric_mean(returns: pd.Series) -> float:
