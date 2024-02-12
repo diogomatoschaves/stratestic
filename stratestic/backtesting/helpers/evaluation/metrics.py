@@ -79,7 +79,7 @@ def sharpe_ratio(returns: pd.Series, risk_free_rate: float = 0, trading_days: in
 def sortino_ratio(returns: pd.Series, target_return: float = 0, risk_free_rate: float = 0) -> float:
     """Calculate the Sortino ratio."""
     downside_returns = returns.copy()
-    downside_returns[downside_returns > target_return] = 0
+    downside_returns[downside_returns < target_return] = 0
     downside_deviation = volatility_pct_annualized(downside_returns)
     cumulative_returns = returns.cumsum().apply(np.exp)
     return (return_pct_annualized(cumulative_returns) - risk_free_rate) / downside_deviation
