@@ -3,6 +3,7 @@ import os
 import pandas as pd
 
 import pytest
+from pandas import Timedelta
 
 from stratestic.backtesting import IterativeBacktester, VectorizedBacktester
 from stratestic.backtesting.combining import StrategyCombiner
@@ -52,6 +53,27 @@ class TestIterativeBacktester:
                 assert d[key] == pytest.approx(
                     fixture["out"]["expected_results"][i][key], 0.2
                 )
+
+    @pytest.mark.slow
+    def test_run_null_index_freq(self, mocked_plotly_figure_show):
+
+        fixture = [fixture for _, fixture in fixtures.items()][0]
+
+        strategy = fixture["in"]["strategy"]
+        params = fixture["in"]["params"]
+        trading_costs = fixture["in"]["trading_costs"]
+
+        test_data = data.set_index("open_time")
+
+        test_data.drop(index=test_data.index[1], inplace=True)
+
+        strategy_instance = strategy(**params, data=test_data)
+
+        ite = IterativeBacktester(strategy_instance, trading_costs=trading_costs)
+
+        ite.run()
+
+        assert ite.index_frequency == Timedelta('0 days 00:05:00')
 
     @pytest.mark.parametrize(
         "fixture",

@@ -310,9 +310,21 @@ class BacktestMixin:
 
         self._fix_original_data()
 
-        self.index_frequency = self._original_data.index.inferred_freq
+        self._set_index_frequency()
 
         self.set_parameters(params, data=self._original_data.copy())
+
+    def _set_index_frequency(self):
+        self.index_frequency = self._original_data.index.inferred_freq
+
+        if self.index_frequency is None:
+            data_index = self._original_data.index
+            frequencies = []
+            for i in range(7):
+                index = np.random.randint(0, len(data_index) - 1)
+                frequencies.append(data_index[index + 1] - data_index[index])
+
+            self.index_frequency = max(set(frequencies), key=frequencies.count)
 
     @staticmethod
     def _get_optimization_input(optimization_params, strategy):
