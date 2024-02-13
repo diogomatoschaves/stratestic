@@ -251,7 +251,6 @@ def worst_trade_pct(trades: List[Trade]) -> float:
 def avg_trade_pct(trades: List[Trade]) -> float:
     """Calculate the average trade percentage."""
     trades_pct = map(
-        # lambda trade: (trade.exit_price - trade.entry_price) * leverage / trade.entry_price * trade.side,
         lambda trade: trade.pnl,
         trades
     )
