@@ -1,6 +1,7 @@
 import json
 import logging
 import math
+import os
 
 import numpy as np
 import pandas as pd
@@ -161,7 +162,14 @@ class BacktestMixin:
 
     def load_data(self, data=None, csv_path=None):
         if data is None or csv_path:
-            csv_path = csv_path if csv_path else config_vars.ohlc_data_file
+            default_file_path = os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__),
+                    '..',
+                    config_vars.ohlc_data_file
+                )
+            )
+            csv_path = csv_path if csv_path else default_file_path
             data = pd.read_csv(csv_path, index_col='date', parse_dates=True)
             data = data[~data.index.duplicated(keep='last')]  # remove duplicates
 
@@ -599,7 +607,8 @@ class BacktestMixin:
 
     def _load_leverage_brackets(self):
 
-        filepath = config_vars.leverage_brackets_file
+        filepath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', config_vars.leverage_brackets_file))
+
         with open(filepath, 'r') as f:
             data = json.load(f)
 
