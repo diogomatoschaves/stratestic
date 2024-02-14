@@ -17,11 +17,11 @@ class MovingAverageConvergenceDivergence(MACD, StrategyMixin):
 
     Parameters
     ----------
-    window_slow : int, optional
+    window_slow : int
         Slow moving average window, by default 26
-    window_fast : int, optional
+    window_fast : int
         Fast moving average window, by default 12
-    window_sign : int, optional
+    window_sign : int
         Signal moving average window, by default 9
     data : pd.DataFrame, optional
         Data to use, by default None
@@ -38,9 +38,9 @@ class MovingAverageConvergenceDivergence(MACD, StrategyMixin):
 
     def __init__(
         self,
-        window_slow: int = 26,
-        window_fast: int = 12,
-        window_sign: int = 9,
+        window_slow: int,
+        window_fast: int,
+        window_sign: int,
         data: pd.DataFrame = None,
         **kwargs
     ):
