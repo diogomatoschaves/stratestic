@@ -6,10 +6,8 @@ import os
 import numpy as np
 import pandas as pd
 import progressbar
-from scipy.optimize import brute
 import plotly.io as pio
 
-from stratestic.backtesting.combining import StrategyCombiner
 from stratestic.backtesting.helpers import Trade
 from stratestic.backtesting.helpers.evaluation import (
     get_results,
@@ -21,8 +19,9 @@ from stratestic.backtesting.helpers.evaluation import (
     SIDE, STRATEGY_RETURNS_TC, STRATEGY_RETURNS
 )
 from stratestic.backtesting.helpers.plotting import plot_backtest_results
+from stratestic.backtesting.optimization import strategy_optimizer, adapt_optimization_input, get_params_mapping
 from stratestic.utils.config_parser import get_config
-from stratestic.utils.exceptions import StrategyRequired, OptimizationParametersInvalid, SymbolInvalid, LeverageInvalid
+from stratestic.utils.exceptions import SymbolInvalid, LeverageInvalid
 from stratestic.utils.logger import configure_logger
 
 config_vars = get_config('general')
@@ -121,6 +120,9 @@ class BacktestMixin:
             self.include_margin = True
             self._load_leverage_brackets()
 
+        self.bar = None
+        self.optimization_steps = 0
+
     def __getattr__(self, attr):
         """
         Overrides the __getattr__ method to get attributes from the trading strategy object.
@@ -160,6 +162,46 @@ class BacktestMixin:
             raise ValueError('Margin threshold must be between 0 and 1.')
 
     def load_data(self, data=None, csv_path=None):
+        """
+        Loads market data into the trading strategy from a pandas DataFrame or a CSV file.
+        If no data source is explicitly provided, it attempts to load data from a default CSV
+        file path specified in the configuration.
+
+        Parameters
+        ----------
+        data : pd.DataFrame, optional
+            A pandas DataFrame containing market data. Expected to have a 'date' column as
+            he index and OHLCV columns. If provided, this data is used directly.
+        csv_path : str, optional
+            The file path to a CSV file containing market data. The CSV is expected to have
+            a 'date' column that will be used as the index, along with OHLCV columns.
+            If `csv_path` is provided, it takes precedence over `data`.
+
+        Notes
+        -----
+        - If both `data` and `csv_path` are None, the method attempts to load the data from
+        a default CSV file path specified by `config_vars.ohlc_data_file`.
+        - The method ensures there are no duplicated indices in the loaded data by keeping
+        the last occurrence of any duplicated 'date' index.
+        - This method sets the loaded data as the current dataset for the strategy
+        and makes a copy of the original data for internal use.
+
+        Raises
+        ------
+        FileNotFoundError
+            If a `csv_path` is specified but the file cannot be found at the provided path.
+        pd.errors.EmptyDataError
+            If the CSV file is empty or if it contains only headers without any data rows.
+
+        Examples
+        --------
+        >>> strategy_instance.load_data(csv_path='path/to/your/data.csv')
+        This will load the market data from the specified CSV file and prepare it for the strategy.
+
+        >>> strategy_instance.load_data(data=your_dataframe)
+        This will directly use the provided DataFrame as the market data for the strategy.
+        """
+
         if data is None or csv_path:
             default_file_path = os.path.abspath(
                 os.path.join(
@@ -177,21 +219,50 @@ class BacktestMixin:
         self.set_data(data.copy(), self.strategy)
 
     def run(self, print_results=True, plot_results=True, leverage=None):
-        """Runs the trading strategy and prints and/or plots the results.
-
-        Parameters:
-        -----------
-        print_results : bool
-            If True, print the results of the backtest.
-        plot_results : bool
-            If True, plot the performance of the trading strategy compared to a buy and hold strategy.
-        leverage : int
-            the leverage to run the backtest with
-
-        Returns:
-        --------
-        None
         """
+        Executes the trading strategy, evaluates its performance, and optionally prints and plots the results.
+        The method supports applying leverage to the trading strategy to assess its impact on performance.
+
+        Parameters
+        ----------
+        print_results : bool, optional
+            If True (default), the performance summary of the trading strategy is printed to the console.
+            The summary typically includes key performance indicators such as net profit, Sharpe ratio,
+            maximum drawdown, and other relevant metrics.
+        plot_results : bool, optional
+            If True (default), the method generates plots comparing the trading strategy's performance
+            against a benchmark, such as a "buy and hold" strategy. These plots can include equity curves,
+            drawdown periods, and other performance metrics visualizations.
+        leverage : int or float, optional
+            The leverage level to apply to the trading strategy during the backtest. This parameter
+            adjusts the size of positions taken by the strategy proportionally. If None (default),
+            no leverage is applied. Note that using leverage can significantly increase both potential
+            returns and potential risks.
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        - The method internally calls a private method `_test_strategy` to perform the backtest,
+        which should implement the actual backtesting logic, including applying leverage,
+        calculating performance metrics, and handling plotting.
+        - The performance metrics (`perf`), outperformance metrics (`outperf`), and any additional
+        results (`results`) are stored as attributes of the strategy instance after the method completes.
+        This allows for further analysis or external reporting.
+
+        Examples
+        --------
+        >>> strategy_instance.run(print_results=True, plot_results=True, leverage=2)
+        This example runs the strategy with 2x leverage and both prints and plots the results.
+
+        Raises
+        ------
+        ValueError
+            If an invalid `leverage` value is provided (e.g., negative numbers).
+        """
+
         if leverage is not None:
             self.set_leverage(leverage)
 
@@ -227,22 +298,21 @@ class BacktestMixin:
             The negative performance of the strategy using the optimal parameter values.
         """
 
-        opt_params, strategy_params_mapping, optimization_steps = self._adapt_optimization_input(params)
+        opt_params, strategy_params_mapping, optimization_steps = adapt_optimization_input(self.strategy, params)
 
         self.bar = progressbar.ProgressBar(max_value=optimization_steps, redirect_stdout=True)
         self.optimization_steps = 0
 
-        opt = brute(
+        opt = strategy_optimizer(
             self._update_and_run, opt_params,
             (False, False, strategy_params_mapping, params),
-            finish=None,
             **kwargs
         )
 
         if not isinstance(opt, (list, tuple, type(np.array([])))):
             opt = np.array([opt])
 
-        return (self._get_params_mapping(opt, strategy_params_mapping, params),
+        return (get_params_mapping(self.strategy, opt, strategy_params_mapping, params),
                 -self._update_and_run(opt, True, True, strategy_params_mapping, params))
 
     def maximum_leverage(self, margin_threshold=None):
@@ -332,69 +402,6 @@ class BacktestMixin:
                 frequencies.append(data_index[index + 1] - data_index[index])
 
             self.index_frequency = max(set(frequencies), key=frequencies.count)
-
-    @staticmethod
-    def _get_optimization_input(optimization_params, strategy):
-        opt_params = []
-        optimizations_steps = 1
-        for param in strategy.params:
-
-            if param not in optimization_params:
-                continue
-
-            param_value = getattr(strategy, f"_{param}")
-            is_int = isinstance(param_value, int)
-            is_float = isinstance(param_value, float)
-
-            step = 1 if is_int else None
-
-            limits = optimization_params[param] \
-                if param in optimization_params \
-                else (param_value, param_value + 1) if is_int or is_float \
-                else None
-
-            if limits is not None:
-                params = (*limits, step) if step is not None else limits
-                opt_params.append(params)
-
-                optimizations_steps *= (limits[1] - limits[0])
-
-        return opt_params, optimizations_steps
-
-    def _adapt_optimization_input(self, params):
-
-        if not self.strategy:
-            raise StrategyRequired
-
-        if isinstance(self.strategy, StrategyCombiner):
-            if not isinstance(params, (list, tuple, type(np.array([])))):
-                raise OptimizationParametersInvalid('Optimization parameters must be provided as a list'
-                                                    ' of dictionaries with the parameters for each individual strategy')
-
-            if len(params) != len(self.strategy.strategies):
-                raise OptimizationParametersInvalid(f'Wrong number of parameters. '
-                                                    f'Number of strategies is {len(self.strategy.strategies)}')
-
-            opt_params = []
-            strategy_params_mapping = []
-            optimization_steps = 1
-            for i, strategy in enumerate(self.strategy.strategies):
-                strategy_params, opt_steps = self._get_optimization_input(params[i], strategy)
-                opt_params.extend(strategy_params)
-                strategy_params_mapping.append(len(strategy_params))
-
-                optimization_steps *= opt_steps
-
-            return opt_params, strategy_params_mapping, optimization_steps
-
-        else:
-            if not isinstance(params, dict):
-                raise OptimizationParametersInvalid('Optimization parameters must be provided as a '
-                                                    'dictionary with the parameters the strategy')
-
-            strategy_params, optimization_steps = self._get_optimization_input(params, self.strategy)
-
-            return strategy_params, None, optimization_steps
 
     def _sanitize_equity(self, df, trades):
 
@@ -587,7 +594,7 @@ class BacktestMixin:
         """
         print_results, plot_results, strategy_params_mapping, optimization_params = args
 
-        test_params = self._get_params_mapping(parameters, strategy_params_mapping, optimization_params)
+        test_params = get_params_mapping(self.strategy, parameters, strategy_params_mapping, optimization_params)
 
         result = self._test_strategy(test_params, print_results=print_results, plot_results=plot_results)
 
