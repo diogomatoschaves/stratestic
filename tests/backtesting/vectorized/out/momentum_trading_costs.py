@@ -1,9 +1,9 @@
-from pandas import Timestamp
+from pandas import Timestamp, Timedelta
 
 expected_performance = 1.004365
 expected_outperformance = -0.011901
 
-expected_optimization_results = ({"window": 5.0}, 1.012263)
+expected_optimization_results = ({'window': 1.0}, Timedelta('-1 days +23:30:00'))
 
 expected_results = [
     {

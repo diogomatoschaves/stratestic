@@ -19,7 +19,8 @@ from stratestic.backtesting.helpers.evaluation import (
     SIDE, STRATEGY_RETURNS_TC, STRATEGY_RETURNS
 )
 from stratestic.backtesting.helpers.plotting import plot_backtest_results
-from stratestic.backtesting.optimization import strategy_optimizer, adapt_optimization_input, get_params_mapping
+from stratestic.backtesting.optimization import strategy_optimizer, adapt_optimization_input, get_params_mapping, \
+    optimization_options_factor, optimization_options
 from stratestic.utils.config_parser import get_config
 from stratestic.utils.exceptions import SymbolInvalid, LeverageInvalid
 from stratestic.utils.logger import configure_logger
@@ -272,7 +273,7 @@ class BacktestMixin:
         self.outperf = outperf
         self.results = results
 
-    def optimize(self, params, **kwargs):
+    def optimize(self, params, optimization_metric="Return", **kwargs):
         """Optimizes the trading strategy using brute force.
 
         Parameters:
@@ -287,8 +288,13 @@ class BacktestMixin:
 
             Example for multiple strategies
                 params = [dict(window=(10, 20, 1)), dict(ma=(30, 50, 2)]
-        **kwargs : dict
-            Additional arguments to pass to the `brute` function.
+        optimization_metric : str, optional
+            The metric by which to perform the optimization. Option between:
+            return_pct, sharpe_ratio, sortino_ratio, calmar_ratio, win_rate,
+            profit_factor, sqn, expectancy, volatility_pct_annualized,
+            max_drawdown, avg_drawdown, max_drawdown_duration
+                **kwargs : dict
+            Additional arguments to pass to the `optimizing` function.
 
         Returns:
         --------
@@ -297,6 +303,8 @@ class BacktestMixin:
         -self._update_and_run(opt, plot_results=True) : float
             The negative performance of the strategy using the optimal parameter values.
         """
+
+        self._check_metric_input(optimization_metric)
 
         opt_params, strategy_params_mapping, optimization_steps = adapt_optimization_input(self.strategy, params)
 
@@ -390,6 +398,13 @@ class BacktestMixin:
         self._set_index_frequency()
 
         self.set_parameters(params, data=self._original_data.copy())
+
+    def _check_metric_input(self, optimization_metric):
+        if optimization_metric not in optimization_options:
+            raise ValueError(f"The chosen metric is not supported. "
+                             f"Choose one of: {', '.join(optimization_options.keys())}")
+        else:
+            self.optimization_metric = optimization_options[optimization_metric]
 
     def _set_index_frequency(self):
         self.index_frequency = self._original_data.index.inferred_freq
@@ -533,24 +548,6 @@ class BacktestMixin:
                 title=title
             )
 
-    def _get_params_mapping(self, parameters, strategy_params_mapping, optimization_params):
-        if not isinstance(self.strategy, StrategyCombiner):
-            strategy_params = [param for param in self.strategy.get_params().keys() if param in optimization_params]
-            new_params = {strategy_params[i]: parameter for i, parameter in enumerate(parameters)}
-        else:
-            new_params = []
-
-            j = -1
-            for i, mapping in enumerate(strategy_params_mapping):
-                params = {}
-                strategy_params = list(self.strategy.get_params(strategy_index=i).keys())
-                for k, j in enumerate(range(j + 1, j + 1 + mapping)):
-                    params.update({strategy_params[k]: parameters[j]})
-
-                new_params.append(params)
-
-        return new_params
-
     def _update_and_run(self, parameters, *args):
         """
         Update the hyperparameters of the strategy with the given `args`,
@@ -596,7 +593,7 @@ class BacktestMixin:
 
         test_params = get_params_mapping(self.strategy, parameters, strategy_params_mapping, optimization_params)
 
-        result = self._test_strategy(test_params, print_results=print_results, plot_results=plot_results)
+        results = self._test_strategy(test_params, print_results=print_results, plot_results=plot_results)
 
         self.optimization_steps += 1
 
@@ -605,7 +602,11 @@ class BacktestMixin:
         except ValueError:
             pass
 
-        return -result[0]
+        result = results[2][self.optimization_metric] if results[2] is not None else -np.inf
+
+        result = result * optimization_options_factor[self.optimization_metric]
+
+        return result
 
     def _fix_original_data(self):
         if self._original_data is None:

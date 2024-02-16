@@ -2,7 +2,42 @@ import numpy as np
 from scipy.optimize import brute
 
 from stratestic.backtesting.combining import StrategyCombiner
-from stratestic.utils.exceptions import StrategyRequired, OptimizationParametersInvalid
+from stratestic.utils.exceptions import OptimizationParametersInvalid
+
+
+optimization_options = {
+    "Return": "return_pct",
+    "Sharpe Ratio": "sharpe_ratio",
+    "Calmar Ratio": "calmar_ratio",
+    "Sortino Ratio": "sortino_ratio",
+    "Win Rate": "win_rate",
+    "Profit Factor": "profit_factor",
+    "System Quality Number": "sqn",
+    "Expectancy": "expectancy",
+    "Volatility": "volatility_pct_annualized",
+    "Max Drawdown": "max_drawdown",
+    "Avg Drawdown": "avg_drawdown",
+    "Max Drawdown Duration": "max_drawdown_duration",
+    "Avg Drawdown Duration": "avg_drawdown_duration",
+}
+
+
+# 1 for minimizing, and -1 for maximizing
+optimization_options_factor = {
+    "return_pct": -1,
+    "sharpe_ratio": -1,
+    "sortino_ratio": -1,
+    "calmar_ratio": -1,
+    "win_rate": -1,
+    "profit_factor": -1,
+    "sqn": -1,
+    "expectancy": -1,
+    "volatility_pct_annualized": 1,
+    "max_drawdown": -1,
+    "avg_drawdown": -1,
+    "max_drawdown_duration": 1,
+    "avg_drawdown_duration": 1,
+}
 
 
 def strategy_optimizer(strategy_runner, opt_params, runner_args, **kwargs):
@@ -37,6 +72,7 @@ def strategy_optimizer(strategy_runner, opt_params, runner_args, **kwargs):
         strategy_runner, opt_params,
         runner_args,
         finish=None,
+        workers=1,
         **kwargs
     )
 
@@ -75,9 +111,6 @@ def adapt_optimization_input(strategy, params):
     This function checks the type of the input strategy and parameters, ensuring they are in
     the correct format for optimization. It raises appropriate exceptions for invalid inputs.
     """
-
-    if not strategy:
-        raise StrategyRequired
 
     if isinstance(strategy, StrategyCombiner):
         if not isinstance(params, (list, tuple, type(np.array([])))):
@@ -142,7 +175,6 @@ def _get_optimization_input(optimization_params, strategy):
 
         param_value = getattr(strategy, f"_{param}")
         is_int = isinstance(param_value, int)
-        is_float = isinstance(param_value, float)
 
         if len(optimization_params[param]) == 2:
             step = 1 if is_int else None

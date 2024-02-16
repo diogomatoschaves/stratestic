@@ -115,10 +115,10 @@ class TestVectorizedBacktester:
 
         vect = VectorizedBacktester(strategy_instance, trading_costs=trading_costs)
 
-        optimization_results, perf = vect.optimize(optimization_params)
+        optimization_results = vect.optimize(*optimization_params)
 
         assert (
-            optimization_results == fixture["out"]["expected_optimization_results"][0]
+            optimization_results == fixture["out"]["expected_optimization_results"]
         )
 
     @pytest.mark.parametrize(

@@ -1,6 +1,6 @@
 from pandas import Timestamp
 
-expected_optimization_results = ({'nr_lags': 3.0}, 1.0020789049332337)
+expected_optimization_results = ({'nr_lags': 2.0}, 13.175614657220974)
 
 expected_results = [
     {

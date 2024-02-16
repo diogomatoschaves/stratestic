@@ -1,6 +1,4 @@
 import numpy as np
-import pandas as pd
-from pandas import Timestamp
 
 from stratestic.backtesting._mixin import BacktestMixin
 from stratestic.backtesting.helpers import Trade
@@ -89,7 +87,7 @@ class VectorizedBacktester(BacktestMixin):
         data = self._get_data().dropna().copy()
 
         if data.empty:
-            return 0, 0
+            return 0, 0, None
 
         data, trades = self._vectorized_backtest(data)
 
