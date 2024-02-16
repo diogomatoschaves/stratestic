@@ -1,12 +1,11 @@
 import logging
 
 import numpy as np
-import pandas as pd
 
 from stratestic.backtesting._mixin import BacktestMixin
 from stratestic.backtesting.helpers import Trade
 from stratestic.backtesting.helpers.evaluation import CUM_SUM_STRATEGY, CUM_SUM_STRATEGY_TC, BUY_AND_HOLD, \
-    STRATEGY_RETURNS, STRATEGY_RETURNS_TC
+    STRATEGY_RETURNS_TC
 from stratestic.backtesting.helpers.evaluation._constants import MARGIN_RATIO, SIDE
 from stratestic.backtesting.helpers.margin import calculate_margin_ratio, get_maintenance_margin, calculate_liquidation_price
 from stratestic.trading import Trader
@@ -207,6 +206,7 @@ class IterativeBacktester(BacktestMixin, Trader):
         amount = self.amount * self.leverage
 
         for bar, (timestamp, row) in enumerate(data.iterrows()):
+
             signal = self.get_signal(row)
 
             previous_position = self._get_position(self.symbol)

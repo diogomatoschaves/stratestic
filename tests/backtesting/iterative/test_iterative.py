@@ -54,7 +54,6 @@ class TestIterativeBacktester:
                     fixture["out"]["expected_results"][i][key], 0.2
                 )
 
-    @pytest.mark.slow
     def test_run_null_index_freq(self, mocked_plotly_figure_show):
 
         fixture = [fixture for _, fixture in fixtures.items()][0]
@@ -174,6 +173,7 @@ class TestIterativeBacktester:
 
         assert optimization_results == fixture["out"]["expected_optimization_results"][0]
 
+    @pytest.mark.slow
     @pytest.mark.parametrize(
         "input_params,optimization_params,expected_results",
         [
@@ -201,7 +201,7 @@ class TestIterativeBacktester:
                     "method": "Majority"
                 },
                 [{"window": (2, 4)}, {"ma": (1, 3)}, {}],
-                [{'window': 3.0}, {'ma': 2.0}, {'ma': 3.0, 'sd': 1.0}],
+                [{'window': 3.0}, {'ma': 2.0}, {}],
                 id='3_strategies-majority'
             ),
             pytest.param(

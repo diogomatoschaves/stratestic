@@ -21,6 +21,7 @@ humanfriendly = "^10.0"
 plotly = "^5.14.1"
 tzdata = "2022.7"
 progressbar2 = "^4.2.0"
+scikit-learn = "^1.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.4"

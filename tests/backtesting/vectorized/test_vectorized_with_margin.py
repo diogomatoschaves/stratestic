@@ -20,7 +20,6 @@ fixtures = get_fixtures(current_path, keys=["in_margin", "out_margin"])
 
 class TestVectorizedBacktesterMargin:
 
-    @pytest.mark.slow
     @pytest.mark.parametrize(
         "leverage",
         [
