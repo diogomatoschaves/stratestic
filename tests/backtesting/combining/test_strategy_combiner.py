@@ -108,7 +108,6 @@ class TestStrategyCombiner:
 
         assert combiner.data["side"].to_list() == expected_results
 
-    @pytest.mark.slow
     @pytest.mark.parametrize(
         "fixture",
         [

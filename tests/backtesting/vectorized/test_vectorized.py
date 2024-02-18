@@ -142,7 +142,7 @@ class TestVectorizedBacktester:
                     "method": "Majority",
                 },
                 [{"window": (2, 4)}, {"ma": (1, 3)}, {}],
-                [{"window": 3.0}, {"ma": 2.0}, {"ma": 3.0, "sd": 1.0}],
+                [{'window': 3.0}, {'ma': 2.0}, {}],
                 id="3_strategies-majority-optimization",
             ),
             pytest.param(
@@ -238,3 +238,13 @@ class TestVectorizedBacktester:
             vect.processed_data[cum_returns_tc], ite.processed_data[cum_returns_tc]
         )
         pd.testing.assert_frame_equal(trades_vect, trades_ite)
+
+    def test_load_data(self):
+
+        strategy = Momentum(10)
+
+        vect = VectorizedBacktester(strategy)
+        vect.load_data()
+
+        vect._original_data = None
+        vect._fix_original_data()

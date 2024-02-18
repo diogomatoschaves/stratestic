@@ -5,3 +5,4 @@ from stratestic.utils.exceptions.strategy_invalid import StrategyInvalid
 from stratestic.utils.exceptions.strategy_required import StrategyRequired
 from stratestic.utils.exceptions.leverage_invalid import LeverageInvalid
 from stratestic.utils.exceptions.no_config_file import NoConfigFile
+from stratestic.utils.exceptions.model_not_fitted import ModelNotFitted

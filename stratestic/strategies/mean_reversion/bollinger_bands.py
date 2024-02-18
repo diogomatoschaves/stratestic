@@ -78,16 +78,16 @@ class BollingerBands(StrategyMixin):
         """
         data = super().update_data(data)
 
-        data["sma"] = data[self.close_col].rolling(self._ma).mean()
-        data["upper"] = data["sma"] + data[self.close_col].rolling(self._ma).std() * self._sd
-        data["lower"] = data["sma"] - data[self.close_col].rolling(self._ma).std() * self._sd
+        data["sma"] = data[self._close_col].rolling(self._ma).mean()
+        data["upper"] = data["sma"] + data[self._close_col].rolling(self._ma).std() * self._sd
+        data["lower"] = data["sma"] - data[self._close_col].rolling(self._ma).std() * self._sd
 
         return self.calculate_positions(data)
 
     def calculate_positions(self, data):
-        data["distance"] = data[self.close_col] - data["sma"]
-        data[SIDE] = np.where(data[self.close_col] > data["upper"], -1, np.nan)
-        data[SIDE] = np.where(data[self.close_col] < data["lower"], 1, data[SIDE])
+        data["distance"] = data[self._close_col] - data["sma"]
+        data[SIDE] = np.where(data[self._close_col] > data["upper"], -1, np.nan)
+        data[SIDE] = np.where(data[self._close_col] < data["lower"], 1, data[SIDE])
         data[SIDE] = np.where(data["distance"] * data["distance"].shift(1) < 0, 0, data[SIDE])
         data[SIDE] = data[SIDE].ffill().fillna(0)
 

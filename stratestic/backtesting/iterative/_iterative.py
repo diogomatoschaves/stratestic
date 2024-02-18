@@ -1,12 +1,11 @@
 import logging
 
 import numpy as np
-import pandas as pd
 
 from stratestic.backtesting._mixin import BacktestMixin
 from stratestic.backtesting.helpers import Trade
 from stratestic.backtesting.helpers.evaluation import CUM_SUM_STRATEGY, CUM_SUM_STRATEGY_TC, BUY_AND_HOLD, \
-    STRATEGY_RETURNS, STRATEGY_RETURNS_TC
+    STRATEGY_RETURNS_TC
 from stratestic.backtesting.helpers.evaluation._constants import MARGIN_RATIO, SIDE
 from stratestic.backtesting.helpers.margin import calculate_margin_ratio, get_maintenance_margin, calculate_liquidation_price
 from stratestic.trading import Trader
@@ -125,7 +124,7 @@ class IterativeBacktester(BacktestMixin, Trader):
         float
             The price.
         """
-        price = row[self.close_col]
+        price = row[self._close_col]
 
         return price
 
@@ -145,7 +144,7 @@ class IterativeBacktester(BacktestMixin, Trader):
         float
             The price.
         """
-        price = row[self.high_col] if side == -1 else row[self.low_col]
+        price = row[self._high_col] if side == -1 else row[self._low_col]
 
         return price
 
@@ -207,6 +206,7 @@ class IterativeBacktester(BacktestMixin, Trader):
         amount = self.amount * self.leverage
 
         for bar, (timestamp, row) in enumerate(data.iterrows()):
+
             signal = self.get_signal(row)
 
             previous_position = self._get_position(self.symbol)
@@ -232,7 +232,7 @@ class IterativeBacktester(BacktestMixin, Trader):
                 new_trade = trades >= 1
                 self._calculate_margin_ratio(row, new_trade)
 
-            strategy_return = row[self.returns_col] * previous_position - trades * self.tc
+            strategy_return = row[self._returns_col] * previous_position - trades * self.tc
 
             simple_return = np.exp(strategy_return) - 1
 
@@ -263,7 +263,7 @@ class IterativeBacktester(BacktestMixin, Trader):
 
         data[SIDE] = self.positions[self.symbol][1:]
         data.loc[data.index[0], SIDE] = self.positions[self.symbol][1]
-        data.loc[data.index[0], self.returns_col] = 0
+        data.loc[data.index[0], self._returns_col] = 0
         data.loc[data.index[0], STRATEGY_RETURNS_TC] = 0
 
         data["equity"] = self.equity

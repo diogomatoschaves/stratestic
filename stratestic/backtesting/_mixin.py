@@ -112,7 +112,6 @@ class BacktestMixin:
         self.symbol = symbol
         self.tc = trading_costs / 100
         self.strategy = None
-        self._original_data = None
 
         self.perf = 0
         self.outperf = 0
@@ -182,12 +181,12 @@ class BacktestMixin:
 
         Parameters:
         -----------
-        params : dict or None
-            The parameters to use for the trading strategy.
         print_results : bool
             If True, print the results of the backtest.
         plot_results : bool
             If True, plot the performance of the trading strategy compared to a buy and hold strategy.
+        leverage : int
+            the leverage to run the backtest with
 
         Returns:
         --------
@@ -208,7 +207,7 @@ class BacktestMixin:
         Parameters:
         -----------
         params : dict, list
-            A dictionary or list (for strategy combintion) containing the parameters to optimize.
+            A dictionary or list (for strategy combination) containing the parameters to optimize.
             The parameters must be given as the keywords of a dictionary, and the value is an array
             of the lower limit, upper limit and step, respectively.
 
@@ -235,7 +234,7 @@ class BacktestMixin:
 
         opt = brute(
             self._update_and_run, opt_params,
-            (False, False, strategy_params_mapping),
+            (False, False, strategy_params_mapping, params),
             finish=None,
             **kwargs
         )
@@ -243,8 +242,8 @@ class BacktestMixin:
         if not isinstance(opt, (list, tuple, type(np.array([])))):
             opt = np.array([opt])
 
-        return (self._get_params_mapping(opt, strategy_params_mapping),
-                -self._update_and_run(opt, True, True, strategy_params_mapping))
+        return (self._get_params_mapping(opt, strategy_params_mapping, params),
+                -self._update_and_run(opt, True, True, strategy_params_mapping, params))
 
     def maximum_leverage(self, margin_threshold=None):
         """
@@ -339,6 +338,10 @@ class BacktestMixin:
         opt_params = []
         optimizations_steps = 1
         for param in strategy.params:
+
+            if param not in optimization_params:
+                continue
+
             param_value = getattr(strategy, f"_{param}")
             is_int = isinstance(param_value, int)
             is_float = isinstance(param_value, float)
@@ -451,7 +454,7 @@ class BacktestMixin:
         return df
 
     def _calculate_cumulative_returns(self, data):
-        data[BUY_AND_HOLD] = data[self.returns_col].cumsum().apply(np.exp).fillna(1)
+        data[BUY_AND_HOLD] = data[self._returns_col].cumsum().apply(np.exp).fillna(1)
         data[CUM_SUM_STRATEGY_TC] = data[STRATEGY_RETURNS_TC].cumsum().apply(np.exp).fillna(1)
 
         if STRATEGY_RETURNS in data.columns:
@@ -523,9 +526,9 @@ class BacktestMixin:
                 title=title
             )
 
-    def _get_params_mapping(self, parameters, strategy_params_mapping):
+    def _get_params_mapping(self, parameters, strategy_params_mapping, optimization_params):
         if not isinstance(self.strategy, StrategyCombiner):
-            strategy_params = list(self.strategy.get_params().keys())
+            strategy_params = [param for param in self.strategy.get_params().keys() if param in optimization_params]
             new_params = {strategy_params[i]: parameter for i, parameter in enumerate(parameters)}
         else:
             new_params = []
@@ -582,9 +585,9 @@ class BacktestMixin:
         strategy's score into a minimization problem, as required by many
         optimization algorithms.
         """
-        print_results, plot_results, strategy_params_mapping = args
+        print_results, plot_results, strategy_params_mapping, optimization_params = args
 
-        test_params = self._get_params_mapping(parameters, strategy_params_mapping)
+        test_params = self._get_params_mapping(parameters, strategy_params_mapping, optimization_params)
 
         result = self._test_strategy(test_params, print_results=print_results, plot_results=plot_results)
 

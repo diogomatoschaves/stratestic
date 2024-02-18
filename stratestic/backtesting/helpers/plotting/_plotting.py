@@ -45,7 +45,7 @@ def plot_backtest_results(
     plot_margin_ratio: bool, optional
         Whether to plot the margin ratio curve
     show_plot_no_tc : bool, optional
-        Whether or not to plot equity without trading costs (default is False)
+        Whether to plot equity without trading costs (default is False)
     title : str, optional
         Title to show on the backtesting results
 
@@ -183,21 +183,22 @@ def plot_equity_curves(fig, data, show_plot_no_tc, index_frequency):
     ), row=1, col=1)
 
     # plot max drawdown duration
-    max_duration_index = np.argmax(durations)
+    if len(durations) > 0:
+        max_duration_index = np.argmax(durations)
 
-    start, end = limits[max_duration_index]
-    value = data[CUM_SUM_STRATEGY_TC][start]
+        start, end = limits[max_duration_index]
+        value = data[CUM_SUM_STRATEGY_TC][start]
 
-    fig.add_trace(go.Scatter(
-        x=[start, end],
-        y=[value, value],
-        name=f'Max Drawdown Duration',
-        mode='lines',
-        line=dict(
-            color='Red',
-            width=1
-        )
-    ), row=1, col=1)
+        fig.add_trace(go.Scatter(
+            x=[start, end],
+            y=[value, value],
+            name=f'Max Drawdown Duration',
+            mode='lines',
+            line=dict(
+                color='Red',
+                width=1
+            )
+        ), row=1, col=1)
 
     # plot peak equity point
     peak_index = data[CUM_SUM_STRATEGY_TC].argmax()
