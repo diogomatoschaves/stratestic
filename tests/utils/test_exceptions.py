@@ -7,7 +7,7 @@ from stratestic.utils.exceptions import (
     OptimizationParametersInvalid,
     StrategyInvalid,
     StrategyRequired,
-    SymbolInvalid
+    SymbolInvalid, ModelNotFitted
 )
 
 API_PREFIX = '/api'
@@ -55,6 +55,11 @@ class TestExceptions:
                 SymbolInvalid(),
                 f"Symbol is not valid.",
                 id="SymbolInvalid",
+            ),
+            pytest.param(
+                ModelNotFitted(),
+                "The model has not been fitted yet.",
+                id="ModelNotFitted",
             ),
         ],
     )
