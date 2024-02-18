@@ -6,7 +6,7 @@ import pandas as pd
 from stratestic.backtesting.helpers.evaluation import SIDE
 from stratestic.strategies._mixin import StrategyMixin
 from stratestic.strategies.properties import STRATEGIES
-from stratestic.utils.exceptions import StrategyInvalid, StrategyRequired, OptimizationParametersInvalid
+from stratestic.utils.exceptions import StrategyInvalid, StrategyRequired
 
 
 strategy_combination_methods = ["Unanimous", "Majority"]

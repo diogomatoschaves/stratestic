@@ -4,43 +4,77 @@ import pandas as pd
 
 class StrategyMixin:
     """
-    A mixin class that provides basic functionality for backtesting trading strategies.
+    A mixin class that provides foundational functionality for backtesting trading strategies,
+    including data preparation and parameter management. It is designed to be extended
+    by specific trading strategy implementations.
 
     Parameters
     ----------
     data : pd.DataFrame, optional
-        The DataFrame containing the historical price data for the asset.
-    close_col : str, optional
-        The name of the column in the data that contains the price data.
-    returns_col : str, optional
-        The name of the column in the data that will contain the returns data.
+        The DataFrame containing the historical price data (OHLCV) for the asset.
+    _trade_on_close : bool, optional
+        Indicates whether trades are executed at the close price of the current bar or the open price of the next bar.
+        Default is True, meaning trades are executed at the close price.
+    _close_col : str, optional
+        The name of the column in 'data' that contains the close price data. Default is 'close'.
+    _open_col : str, optional
+        The name of the column in 'data' that contains the open price data. Default is 'open'.
+    _high_col : str, optional
+        The name of the column in 'data' that contains the high price data. Default is 'high'.
+    _low_col : str, optional
+        The name of the column in 'data' that contains the low price data. Default is 'low'.
+    _returns_col : str, optional
+        The name of the column in 'data' that will contain the calculated returns data. Default is 'returns'.
 
     Attributes
     ----------
     data : pd.DataFrame
-        The DataFrame containing the historical price data for the asset.
-    close_col : str
-        The name of the column in the data that contains the price data.
-    returns_col : str
-        The name of the column in the data that will contain the returns data.
+        The DataFrame containing the historical price data for the asset. It is updated with additional calculations necessary for the strategy.
+    _close_col : str
+        The name of the column containing the close price data.
+    _open_col : str
+        The name of the column containing the open price data.
+    _high_col : str
+        The name of the column containing the high price data.
+    _low_col : str
+        The name of the column containing the low price data.
+    _trade_on_close : bool
+        Indicator of whether trading actions are taken based on the close price of the current period or the open price of the next period.
+    _price_col : str
+        The column name used for price data in trading calculations, determined by 'trade_on_close'.
+    _returns_col : str
+        The name of the column containing the returns data.
     symbol : str
-        The name of the asset being traded.
+        The identifier for the asset being traded. This is typically set by subclasses.
+    _original_data : pd.DataFrame
+        A copy of the original input data, preserved for reference.
 
     Methods
     -------
-    _get_test_title(self)
-        Return a string with the title for the backtest.
-    _get_data() -> pd.DataFrame
-        Returns the current DataFrame containing the historical price data for the asset.
-    set_data(data: pd.DataFrame) -> None
-        Sets the DataFrame containing the historical price data for the asset.
-    set_parameters(params: dict, data: pd.DataFrame) -> None
-        Updates the parameters of the strategy.
-    _calculate_returns() -> None
-        Calculates the returns of the asset and updates the data DataFrame.
-    update_data() -> None
-        Updates the data DataFrame by calculating the returns of the asset.
-
+    __init__(self, data=None, trade_on_close=True, close_col='close',
+             open_col='open', high_col='high', low_col='low', returns_col='returns'):
+        Initializes the StrategyMixin instance with the provided parameters and
+        prepares the data for trading strategy analysis.
+    __repr__(self):
+        Returns a string representation of the strategy, typically the class name.
+    get_params(self, **kwargs):
+        Retrieves the parameters for the strategy.
+    _get_test_title(self):
+        Generates a title for the backtest report based on the strategy details.
+    _get_data(self) -> pd.DataFrame:
+        Provides access to the current price data being used by the strategy.
+    set_data(self, data: pd.DataFrame, strategy_obj=None) -> None:
+        Updates the strategy's data with a new DataFrame, recalculating necessary
+        components based on the new data.
+    set_parameters(self, params=None, data=None) -> None:
+        Allows for dynamic updating of strategy parameters and optionally updates the
+        strategy data.
+    _calculate_returns(self, data) -> pd.DataFrame:
+        Calculates returns based on the specified price column and updates the data
+        DataFrame with these calculations.
+    update_data(self, data) -> pd.DataFrame:
+        Prepares the input data for the strategy by calculating returns and performing
+        any other necessary preprocessing steps.
     """
 
     def __init__(
@@ -72,13 +106,13 @@ class StrategyMixin:
             The name of the column in the data that will contain the returns' data.
         """
 
-        self.close_col = close_col
-        self.open_col = open_col
-        self.high_col = high_col
-        self.low_col = low_col
-        self.trade_on_close = trade_on_close
-        self.price_col = close_col if trade_on_close else open_col
-        self.returns_col = returns_col
+        self._close_col = close_col
+        self._open_col = open_col
+        self._high_col = high_col
+        self._low_col = low_col
+        self._trade_on_close = trade_on_close
+        self._price_col = close_col if trade_on_close else open_col
+        self._returns_col = returns_col
         self.symbol = None
 
         self._original_data = None
@@ -171,12 +205,12 @@ class StrategyMixin:
         Calculates the returns of the asset and updates the data DataFrame.
         """
 
-        if self.trade_on_close:
-            data[self.returns_col] = np.log(data[self.price_col] / data[self.price_col].shift(1))
+        if self._trade_on_close:
+            data[self._returns_col] = np.log(data[self._price_col] / data[self._price_col].shift(1))
         else:
-            data[self.returns_col] = np.log(data[self.price_col].shift(-1) / data[self.price_col])
-            data.loc[data.index[-1], self.returns_col] = \
-                np.log(data.loc[data.index[-1], self.close_col] / data.loc[data.index[-1], self.open_col])
+            data[self._returns_col] = np.log(data[self._price_col].shift(-1) / data[self._price_col])
+            data.loc[data.index[-1], self._returns_col] = \
+                np.log(data.loc[data.index[-1], self._close_col] / data.loc[data.index[-1], self._open_col])
 
         return data
 

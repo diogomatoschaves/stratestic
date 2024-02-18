@@ -17,7 +17,7 @@ class Momentum(StrategyMixin):
     window : int
         Rolling window for computing the momentum.
     data : pd.DataFrame
-        Input data, with at least a 'returns_col' column.
+        Input data with OHLC columns.
     **kwargs
         Additional keyword arguments.
 
@@ -69,7 +69,7 @@ class Momentum(StrategyMixin):
         """
         data = super().update_data(data)
 
-        data["rolling_returns"] = data[self.returns_col].rolling(self._window, min_periods=1).mean()
+        data["rolling_returns"] = data[self._returns_col].rolling(self._window, min_periods=1).mean()
 
         return data
 

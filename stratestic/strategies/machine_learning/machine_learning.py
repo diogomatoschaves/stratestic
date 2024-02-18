@@ -165,7 +165,7 @@ class MachineLearning(StrategyMixin):
         X_roll = get_rolling_features(data, self._rolling_windows, columns=self._rolling_features,
                                       exclude=self._excluded_features, moving_average=self._moving_average)
 
-        y = get_labels(data, returns_col=self.returns_col)
+        y = get_labels(data, returns_col=self._returns_col)
 
         X, y = get_x_y(X_lag, X_roll, y)
 

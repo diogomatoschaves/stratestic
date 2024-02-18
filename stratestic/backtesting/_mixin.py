@@ -454,7 +454,7 @@ class BacktestMixin:
         return df
 
     def _calculate_cumulative_returns(self, data):
-        data[BUY_AND_HOLD] = data[self.returns_col].cumsum().apply(np.exp).fillna(1)
+        data[BUY_AND_HOLD] = data[self._returns_col].cumsum().apply(np.exp).fillna(1)
         data[CUM_SUM_STRATEGY_TC] = data[STRATEGY_RETURNS_TC].cumsum().apply(np.exp).fillna(1)
 
         if STRATEGY_RETURNS in data.columns:

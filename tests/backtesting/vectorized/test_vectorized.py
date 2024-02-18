@@ -238,3 +238,13 @@ class TestVectorizedBacktester:
             vect.processed_data[cum_returns_tc], ite.processed_data[cum_returns_tc]
         )
         pd.testing.assert_frame_equal(trades_vect, trades_ite)
+
+    def test_load_data(self):
+
+        strategy = Momentum(10)
+
+        vect = VectorizedBacktester(strategy)
+        vect.load_data()
+
+        vect._original_data = None
+        vect._fix_original_data()

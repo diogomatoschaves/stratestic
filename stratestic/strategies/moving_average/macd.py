@@ -100,7 +100,7 @@ class MovingAverageConvergenceDivergence(MACD, StrategyMixin):
         """
         data = super().update_data(data)
 
-        self._close = data[self.close_col]
+        self._close = data[self._close_col]
         self._run()
 
         data["macd_diff"] = self.macd_diff()

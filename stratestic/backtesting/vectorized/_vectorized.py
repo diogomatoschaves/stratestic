@@ -144,7 +144,7 @@ class VectorizedBacktester(BacktestMixin):
 
         df = processed_data.copy()
 
-        df.loc[df.index[0], self.returns_col] = 0
+        df.loc[df.index[0], self._returns_col] = 0
 
         if len(trades_df) == 0:
             df["equity"] = 0
@@ -208,12 +208,12 @@ class VectorizedBacktester(BacktestMixin):
 
         """
 
-        cols = [self.price_col, SIDE]
+        cols = [self._price_col, SIDE]
 
         processed_data = processed_data.copy()
 
-        if not self.trade_on_close:
-            processed_data[self.price_col] = processed_data[self.price_col].shift(-1)
+        if not self._trade_on_close:
+            processed_data[self._price_col] = processed_data[self._price_col].shift(-1)
 
         trades = processed_data[processed_data.trades != 0][cols]
 
@@ -221,7 +221,7 @@ class VectorizedBacktester(BacktestMixin):
 
         col = list(set(trades.columns).difference(set(cols)))[0]
 
-        trades = trades.rename(columns={self.price_col: "entry_price", col: "entry_date"})
+        trades = trades.rename(columns={self._price_col: "entry_price", col: "entry_date"})
         trades["exit_price"] = trades["entry_price"].shift(-1) * (1 - trading_costs * trades[SIDE])
         trades["entry_price"] = trades["entry_price"] * (1 + trading_costs * trades[SIDE])
         trades["exit_date"] = trades["entry_date"].shift(-1)
@@ -229,7 +229,7 @@ class VectorizedBacktester(BacktestMixin):
 
         trades["exit_price"] = np.where(
             np.isnan(trades['exit_price']),
-            processed_data.loc[processed_data.index[-1], self.close_col],
+            processed_data.loc[processed_data.index[-1], self._close_col],
             trades['exit_price']
         )
 
@@ -306,7 +306,7 @@ class VectorizedBacktester(BacktestMixin):
         df['units'] = None
         df['maintenance_rate'] = None
         df['maintenance_amount'] = None
-        df['mark_price'] = np.where(df['side'].shift(1) == 1, df[self.low_col], df[self.high_col])
+        df['mark_price'] = np.where(df['side'].shift(1) == 1, df[self._low_col], df[self._high_col])
 
         df_filter = (df.trades != 0) & (df.side != 0)
 

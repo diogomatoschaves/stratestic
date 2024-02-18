@@ -80,9 +80,9 @@ class MovingAverage(StrategyMixin):
         data = super().update_data(data)
 
         if self._moving_av == 'sma':
-            data["SMA"] = sma_indicator(close=data[self.close_col], window=self._ma)
+            data["SMA"] = sma_indicator(close=data[self._close_col], window=self._ma)
         elif self._moving_av == 'ema':
-            data["SMA"] = ema_indicator(close=data[self.close_col], window=self._ma)
+            data["SMA"] = ema_indicator(close=data[self._close_col], window=self._ma)
         else:
             raise('Method not supported')
 
@@ -102,8 +102,8 @@ class MovingAverage(StrategyMixin):
         pd.DataFrame
             OHLCV data with additional 'side' column containing -1 for short, 1 for long.
         """
-        data[SIDE] = np.where(data["SMA"] < data[self.close_col], 1, 0)
-        data[SIDE] = np.where(data["SMA"] > data[self.close_col], -1, data[SIDE])
+        data[SIDE] = np.where(data["SMA"] < data[self._close_col], 1, 0)
+        data[SIDE] = np.where(data["SMA"] > data[self._close_col], -1, data[SIDE])
         return data
 
     def get_signal(self, row=None):
@@ -123,9 +123,9 @@ class MovingAverage(StrategyMixin):
         if row is None:
             row = self.data.iloc[-1]
 
-        if row["SMA"] < row[self.close_col]:
+        if row["SMA"] < row[self._close_col]:
             return 1
-        elif row["SMA"] > row[self.close_col]:
+        elif row["SMA"] > row[self._close_col]:
             return -1
         else:
             return 0
