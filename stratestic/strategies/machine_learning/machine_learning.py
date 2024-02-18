@@ -26,7 +26,7 @@ class MachineLearning(StrategyMixin):
 
     Parameters
     ----------
-    estimator : Literal["Logistic Regression", "Nearest Neighbors", "Linear SVM", "RBF SVM", "Gaussian Process",
+    estimator : Literal["Linear", "Nearest Neighbors", "Linear SVM", "RBF SVM", "Gaussian Process",
                         "Decision Tree", "Random Forest", "Neural Net", "AdaBoost", "Naive Bayes", "QDA"]
         The machine learning algorithm to use for the trading strategy.
     nr_lags : int, optional
@@ -248,7 +248,7 @@ class MachineLearning(StrategyMixin):
         if self.model is None:
             raise ModelNotFitted
 
-        title = f"Learning Curves ({self._estimator}, {estimator_params[self._model_type][self._estimator]})"
+        title = f"Learning Curves ({self._estimator}) \n {estimator_params[self._model_type][self._estimator]})"
 
         tscv = TimeSeriesSplit(n_splits=n_splits)
 

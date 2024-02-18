@@ -6,13 +6,17 @@
 
 
 The `stratestic` module is a Python package for backtesting, analysing and optimizing trading strategies. 
-It includes pre-implemented strategies, but it is also possible to create new strategies or even to combine them.
+It includes a number of pre-implemented strategies, but it is also possible to create new strategies, as well as
+to combine them. It provides a general Machine Learning strategy, which can be further tweaked to your specific needs.
 
 The basic usage is as simple as importing a backtesting class, a strategy and run the backtest. The backtest can 
 then be refined with optimizations or by incorporating leverage.  
 
 Overall it offers a powerful way to explore and experiment with different strategies, 
-and to evaluate the performance under different conditions.
+and to evaluate the performance under different conditions. 
+
+If you are interested in a trading bot that integrates seamlessly with this library, check out 
+[MyCryptoBot](https://github.com/diogomatoschaves/MyCryptoBot).
 
 ## Installation
 
@@ -27,7 +31,8 @@ and to evaluate the performance under different conditions.
 4. [ Optimization ](#optimization)
 5. [ Strategies ](#strategies) <br>
     5.1. [ Combined strategies](#combined-strategies) <br>
-    5.2. [ Create new strategies](#new-strategies)
+    5.2. [ Create new strategies](#new-strategies) <br>
+    5.3. [ Machine Learning strategy ](#machine-learning)
 
 <a name="vectorized-backtesting"></a>
 ### Vectorized Backtesting
@@ -576,3 +581,47 @@ and 0 represents a neutral position.
 
 **In any case it is highly recommended to check the existing [strategies](https://github.com/diogomatoschaves/stratestic/tree/main/stratestic/strategies) to get a better 
 idea of how to implement these methods.**
+
+<a name="machine-learning"></a>
+#### Machine Learning Strategy
+
+This library implements a machine learning strategy, which can be used for backtesting 
+in the same way as for the other strategies, but it has the difference that first a model is trained on 
+the training part of the data, and subsequently the backtest is performed on the test set. 
+This ensures that we're performing out-of-sample backtesting, but it also means that more data is required for 
+a meaningful backtest and good model fit.
+
+What follows is a simple example to demonstrate its usage. For more detailed options please check the 
+docstring of this strategy.
+
+```python
+from stratestic.backtesting import VectorizedBacktester
+from stratestic.strategies import MachineLearning
+
+symbol = "BTCUSDT"
+trading_costs = 0.1 # This should be in percentage, i.e. 0.1% 
+
+ml = MachineLearning(
+    estimator="Random Forest",  # The algorithm to use for training the model.
+    lag_features=["returns"],  # A list of columns which we want to create lagged features.
+    nr_lags=5,  # The number of lag periods.
+    test_size=0.2,  # The proportion between test and training data.
+    verbose=True,
+)
+vect = VectorizedBacktester(ml, symbol, amount=1000, trading_costs=trading_costs)
+
+vect.load_data() 
+vect.run()
+```
+
+The `MachineLearning` strategy provides a method for visualizing learning curves out of the box, which can be 
+accessed either by the strategy object or the backtester:
+
+```python
+vect.learning_curve()
+ml.learning_curve()  # Same as the call above.
+```
+
+<p align="middle">
+  <img src="stratestic/utils/drawings/learning-curves.png" style="width: 50%" />
+</p>
