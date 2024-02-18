@@ -81,6 +81,8 @@ class StrategyMixin:
         self.returns_col = returns_col
         self.symbol = None
 
+        self._original_data = None
+
         if data is not None:
             self.data = self.update_data(data.copy())
 
@@ -153,10 +155,14 @@ class StrategyMixin:
         if params is None:
             return
 
-        for param, new_value in params.items():
-            setattr(self, f"_{param}", self.get_params()[param](new_value))
+        strategy_params = self.get_params()
 
-        data = data.copy() if data is not None else self.data.copy()
+        for param, new_value in params.items():
+            setattr(self, f"_{param}", strategy_params[param](new_value))
+
+        data = data.copy() if data is not None \
+            else self._original_data.copy() if self._original_data is not None \
+            else self.data.copy()
 
         self.data = self.update_data(data)
 
@@ -188,5 +194,10 @@ class StrategyMixin:
         pd.DataFrame
             Updated OHLCV data containing additional columns.
         """
+        data = data[~data.index.duplicated(keep='first')].copy()
 
-        return self._calculate_returns(data)
+        data = self._calculate_returns(data)
+
+        self._original_data = data.copy()
+
+        return data
