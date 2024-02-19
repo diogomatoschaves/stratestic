@@ -618,7 +618,18 @@ vect.load_data()
 vect.run()
 ```
 
-The `MachineLearning` strategy provides a method for visualizing learning curves out of the box, which can be 
+By default, the model is saved in a directory as indicated by the parameter `models_dir`. If one wants to load an 
+existing model, the model filename must be passed at initialization. The model will then be loaded, instead of 
+trained. 
+
+```python
+from stratestic.strategies import MachineLearning
+
+ml = MachineLearning(load_model='<filename>')
+
+```
+
+The `MachineLearning` strategy also provides a method for visualizing learning curves out of the box, which can be 
 accessed either by the strategy object or the backtester:
 
 ```python
@@ -627,5 +638,6 @@ ml.learning_curve()  # Same as the call above.
 ```
 
 <p align="middle">
-  <img src="stratestic/utils/drawings/learning-curves.png" style="width: 50%" />
+  <img src="stratestic/utils/drawings/learning-curves.png" style="width: 40%" />
 </p>
+

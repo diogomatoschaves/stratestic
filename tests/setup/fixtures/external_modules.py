@@ -1,8 +1,12 @@
+import builtins
 import logging
 
+import dill
 import matplotlib.pyplot as plt
 import plotly
 import pytest
+
+import stratestic.strategies
 
 
 @pytest.fixture
@@ -24,3 +28,12 @@ def spy_matplotlib_show(mocker):
 def spy_logging_info(mocker):
     return mocker.spy(logging, "info")
 
+
+@pytest.fixture
+def mocked_dill_dump(mocker):
+    return mocker.patch.object(dill, 'dump', lambda obj, file: None)
+
+
+@pytest.fixture
+def mocked_builtin_open(mocker):
+    return mocker.patch.object(builtins, 'open', lambda filename, file_type: None)

@@ -11,7 +11,9 @@ from stratestic.strategies import Momentum, MovingAverage, BollingerBands, Movin
 from stratestic.utils.exceptions import OptimizationParametersInvalid
 from tests.setup.test_data.sample_data import data
 from tests.setup.test_setup import get_fixtures
-from tests.setup.fixtures.external_modules import mocked_plotly_figure_show
+from tests.setup.fixtures.external_modules import (
+    mocked_plotly_figure_show, mocked_dill_dump, mocked_matplotlib_show, mocked_builtin_open
+)
 
 
 current_path = os.path.dirname(os.path.realpath(__file__))
@@ -23,6 +25,16 @@ cum_returns = "accumulated_strategy_returns"
 cum_returns_tc = "accumulated_strategy_returns_tc"
 
 
+@pytest.fixture
+def common_fixture(
+    mocked_plotly_figure_show,
+    mocked_matplotlib_show,
+    mocked_dill_dump,
+    mocked_builtin_open
+):
+    return
+
+
 class TestIterativeBacktester:
 
     @pytest.mark.parametrize(
@@ -32,7 +44,7 @@ class TestIterativeBacktester:
             for fixture_name, fixture in fixtures.items()
         ],
     )
-    def test_run(self, fixture, mocked_plotly_figure_show):
+    def test_run(self, fixture, common_fixture):
 
         strategy = fixture["in"]["strategy"]
         params = fixture["in"]["params"]
@@ -54,7 +66,7 @@ class TestIterativeBacktester:
                     fixture["out"]["expected_results"][i][key], 0.2
                 )
 
-    def test_run_null_index_freq(self, mocked_plotly_figure_show):
+    def test_run_null_index_freq(self, common_fixture):
 
         fixture = [fixture for _, fixture in fixtures.items()][0]
 
@@ -81,7 +93,7 @@ class TestIterativeBacktester:
             for fixture_name, fixture in fixtures.items()
         ],
     )
-    def test_results_equal_to_vectorized(self, fixture, mocked_plotly_figure_show):
+    def test_results_equal_to_vectorized(self, fixture, common_fixture):
         strategy = fixture["in"]["strategy"]
         params = fixture["in"]["params"]
         trading_costs = fixture["in"]["trading_costs"]
@@ -157,7 +169,7 @@ class TestIterativeBacktester:
             for fixture_name, fixture in fixtures.items()
         ],
     )
-    def test_optimize_parameters(self, fixture, mocked_plotly_figure_show):
+    def test_optimize_parameters(self, fixture, common_fixture):
         strategy = fixture["in"]["strategy"]
         params = fixture["in"]["params"]
         optimization_params = fixture["in"]["optimization_params"]
@@ -220,7 +232,7 @@ class TestIterativeBacktester:
         input_params,
         optimization_params,
         expected_results,
-        mocked_plotly_figure_show
+        common_fixture
     ):
         test_data = data.set_index("open_time")
 
@@ -257,7 +269,7 @@ class TestIterativeBacktester:
         self,
         input_params,
         optimization_params,
-        mocked_plotly_figure_show
+        common_fixture
     ):
         test_data = data.set_index("open_time")
 
@@ -299,7 +311,7 @@ class TestIterativeBacktester:
         self,
         input_params,
         optimization_params,
-        mocked_plotly_figure_show
+        common_fixture
     ):
         test_data = data.set_index("open_time")
 

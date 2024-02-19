@@ -8,7 +8,7 @@ from sklearn.ensemble import (
 )
 from sklearn.gaussian_process import GaussianProcessClassifier, GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF
-from sklearn.linear_model import LogisticRegression, LinearRegression, Lasso
+from sklearn.linear_model import LogisticRegression, Lasso
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.neural_network import MLPClassifier, MLPRegressor
 from sklearn.svm import SVC, SVR
@@ -69,3 +69,10 @@ estimator_params = {
         "Gradient Boosting": dict(max_depth=1, max_features='sqrt'),
     }
 }
+
+
+def get_filename(estimator, model_type, parameters):
+
+    params_str = ','.join([f'{k}={v}'.replace(" ", '') for k, v in parameters.items()])
+
+    return f"{estimator.replace(' ', '_').lower()}-{model_type}-{params_str}"
