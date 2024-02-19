@@ -27,43 +27,6 @@ grid_search_params_defaults = {
 configure_logger()
 
 
-def save_model(model, model_filepath):
-    """
-    Saves the trained machine learning model to a specified filepath using joblib.
-
-    Parameters
-    ----------
-    model : object
-        The trained model object to save.
-    model_filepath : str
-        The file path where the model should be saved.
-
-    Returns
-    -------
-    None
-    """
-
-    joblib.dump(model, model_filepath)
-
-
-def load_model(model_filepath):
-    """
-    Loads a machine learning model from a specified filepath using joblib.
-
-    Parameters
-    ----------
-    model_filepath : str
-        The file path where the model is saved.
-
-    Returns
-    -------
-    object
-        The loaded model object.
-    """
-
-    return joblib.load(model_filepath)
-
-
 def build_pipeline(estimator, polynomial_degree=1):
     """
     Constructs a machine learning pipeline with optional grid search capability.

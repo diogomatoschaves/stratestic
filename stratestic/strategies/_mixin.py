@@ -12,18 +12,18 @@ class StrategyMixin:
     ----------
     data : pd.DataFrame, optional
         The DataFrame containing the historical price data (OHLCV) for the asset.
-    _trade_on_close : bool, optional
+    trade_on_close : bool, optional
         Indicates whether trades are executed at the close price of the current bar or the open price of the next bar.
         Default is True, meaning trades are executed at the close price.
-    _close_col : str, optional
+    close_col : str, optional
         The name of the column in 'data' that contains the close price data. Default is 'close'.
-    _open_col : str, optional
+    open_col : str, optional
         The name of the column in 'data' that contains the open price data. Default is 'open'.
-    _high_col : str, optional
+    high_col : str, optional
         The name of the column in 'data' that contains the high price data. Default is 'high'.
-    _low_col : str, optional
+    low_col : str, optional
         The name of the column in 'data' that contains the low price data. Default is 'low'.
-    _returns_col : str, optional
+    returns_col : str, optional
         The name of the column in 'data' that will contain the calculated returns data. Default is 'returns'.
 
     Attributes

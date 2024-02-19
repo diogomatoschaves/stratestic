@@ -4,19 +4,24 @@ import pytest
 import pandas as pd
 
 from stratestic.strategies import MachineLearning
+from stratestic.strategies.machine_learning.helpers import get_filename, estimator_params
 from stratestic.utils.exceptions import ModelNotFitted
 from tests.setup.test_data.sample_data import data
 from tests.setup.test_setup import get_fixtures
-from tests.setup.fixtures.external_modules import mocked_matplotlib_show, spy_matplotlib_show
+from tests.setup.fixtures.external_modules import mocked_matplotlib_show, mocked_dill_dump, mocked_builtin_open
 
 current_path = os.path.dirname(os.path.realpath(__file__))
 
 fixtures = get_fixtures(current_path)
 
 
+@pytest.fixture
+def common_fixture(mocked_matplotlib_show, mocked_dill_dump, mocked_builtin_open):
+    return
+
+
 class TestStrategy:
 
-    @pytest.mark.slow
     @pytest.mark.parametrize(
         "fixture",
         [
@@ -24,7 +29,7 @@ class TestStrategy:
             for fixture_name, fixture in fixtures.items()
         ],
     )
-    def test_strategy_data(self, fixture, spy_matplotlib_show, mocked_matplotlib_show):
+    def test_strategy_data(self, fixture, common_fixture):
         """
         GIVEN some params
         WHEN the method get_signal is called
@@ -51,7 +56,7 @@ class TestStrategy:
             for fixture_name, fixture in fixtures.items()
         ],
     )
-    def test_strategy_set_parameters(self, fixture, mocked_matplotlib_show):
+    def test_strategy_set_parameters(self, fixture, common_fixture):
         """
         GIVEN some params
         WHEN the method get_signal is called
@@ -86,7 +91,7 @@ class TestStrategy:
             for fixture_name, fixture in fixtures.items()
         ],
     )
-    def test_strategy_get_signal(self, fixture, mocked_matplotlib_show):
+    def test_strategy_get_signal(self, fixture, common_fixture):
         """
         GIVEN some params
         WHEN the method get_signal is called
@@ -101,7 +106,6 @@ class TestStrategy:
 
         assert instance.get_signal() == fixture["out"]["expected_signal"]
 
-    @pytest.mark.slow
     @pytest.mark.parametrize(
         "strategy,params,exception",
         [
@@ -125,7 +129,13 @@ class TestStrategy:
             )
         ],
     )
-    def test_strategy_exceptions(self, strategy, params, exception, mocked_matplotlib_show):
+    def test_strategy_exceptions(
+        self,
+        strategy,
+        params,
+        exception,
+        common_fixture
+    ):
         """
         GIVEN some params
         WHEN the method get_signal is called
@@ -139,7 +149,6 @@ class TestStrategy:
 
         assert excinfo.type == exception
 
-    @pytest.mark.slow
     @pytest.mark.parametrize(
         "strategy,params,method,method_params",
         [
@@ -152,7 +161,14 @@ class TestStrategy:
             ),
         ],
     )
-    def test_strategy_specific_methods(self, strategy, params, method, method_params, mocked_matplotlib_show):
+    def test_strategy_specific_methods(
+        self,
+        strategy,
+        params,
+        method,
+        method_params,
+        common_fixture
+    ):
         """
         GIVEN some params
         WHEN the method get_signal is called
@@ -161,3 +177,29 @@ class TestStrategy:
 
         instance = strategy(**params, data=data, trade_on_close=False)
         getattr(instance, method)(**method_params)
+
+    @pytest.mark.slow
+    def test_machine_learning_save_load(self, mocked_matplotlib_show, tmp_path):
+        """
+        GIVEN some params
+        WHEN the method get_signal is called
+        THEN the return value is equal to the expected response
+        """
+
+        ml = MachineLearning(
+            "Random Forest",
+            lag_features=["returns"],
+            data=data,
+            trade_on_close=False,
+            models_dir=tmp_path
+        )
+
+        filename = get_filename(
+            ml._estimator,
+            ml._model_type,
+            estimator_params[ml._model_type][ml._estimator]
+        ) + '.pkl'
+
+        ml = MachineLearning(load_model=filename, models_dir=tmp_path)
+
+        assert ml.model is not None
