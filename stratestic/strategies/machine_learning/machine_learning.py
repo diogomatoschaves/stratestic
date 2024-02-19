@@ -74,7 +74,7 @@ class MachineLearning(StrategyMixin):
     def __init__(
         self,
         estimator: Literal[
-            "Logistic Regression",
+            "Linear",
             "Nearest Neighbors",
             "Linear SVM",
             "RBF SVM",
@@ -83,15 +83,13 @@ class MachineLearning(StrategyMixin):
             "Random Forest",
             "Neural Net",
             "AdaBoost",
-            "Naive Bayes",
-            "QDA",
         ],
         model_type: Literal["classification", "regression"] = "classification",
         nr_lags: int = 5,
         lag_features: List[str] = None,
         rolling_features: List[str] = None,
         excluded_features: List[str] = None,
-        windows: Union[Tuple[int], int] = 5,
+        window: int = 5,
         test_size: float = 0.2,
         polynomial_degree: int = 1,
         moving_average: Literal["sma", "ema"] = "sma",
@@ -107,7 +105,7 @@ class MachineLearning(StrategyMixin):
         self._check_estimator(estimator, model_type)
         self._model_type = model_type
         self._nr_lags = nr_lags
-        self._rolling_windows = windows
+        self._rolling_windows = window
         self._polynomial_degree = polynomial_degree
         self._lag_features = set(lag_features) \
             if lag_features is not None else []
