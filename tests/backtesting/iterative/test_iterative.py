@@ -169,9 +169,9 @@ class TestIterativeBacktester:
 
         ite = IterativeBacktester(strategy_instance, trading_costs=trading_costs)
 
-        optimization_results, perf = ite.optimize(optimization_params)
+        optimization_results = ite.optimize(*optimization_params)
 
-        assert optimization_results == fixture["out"]["expected_optimization_results"][0]
+        assert optimization_results == fixture["out"]["expected_optimization_results"]
 
     @pytest.mark.slow
     @pytest.mark.parametrize(

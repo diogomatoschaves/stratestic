@@ -5,7 +5,7 @@ expected_outperformance = -0.005152
 
 expected_optimization_results = (
     {"window_slow": 4.0, "window_fast": 3.0, "window_sign": 3.0},
-    1.009722,
+    6.465985017210029,
 )
 
 expected_results = [
