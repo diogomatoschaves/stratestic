@@ -144,18 +144,18 @@ def _get_optimization_input(optimization_params, strategy):
         is_int = isinstance(param_value, int)
         is_float = isinstance(param_value, float)
 
-        step = 1 if is_int else None
+        if len(optimization_params[param]) == 2:
+            step = 1 if is_int else None
+        else:
+            step = optimization_params[param][2]
 
-        limits = optimization_params[param] \
-            if param in optimization_params \
-            else (param_value, param_value + 1) if is_int or is_float \
-            else None
+        limits = optimization_params[param][0:2]
 
-        if limits is not None:
-            params = (*limits, step) if step is not None else limits
-            opt_params.append(params)
+        params = (*limits, step) if step is not None else limits
+        opt_params.append(params)
 
-            optimizations_steps *= (limits[1] - limits[0])
+        multiplier = (limits[1] - limits[0])
+        optimizations_steps *= int(multiplier / step) if step is not None else multiplier
 
     return opt_params, optimizations_steps
 
