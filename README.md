@@ -329,8 +329,14 @@ Out[2]: 5
 <a name="optimization"></a>
 ### Optimization
 
-You can use the optimization API of either the iterative or vectorized backtester in order to find the best combination 
-of parameters for a backtest. Below is an example of how to achive this.
+Both the iterative or vectorized backtester provide an optimization API that allows to   
+find the combination of parameters that best performs in a backtest, optimizing for a specific metric.
+
+The options for optimization metrics are: `Return`, `Sharpe Ratio`, `Calmar Ratio`, `Sortino Ratio`, 
+`Win Rate`, `Profit Factor`, `System Quality Number`, `Expectancy`, `Volatility`, `Maximum Drawdown`,
+`Average Drawdown`, `Maximum Drawdown Duration`, `Average Drawdown Duration`. The default is `Return`.
+
+Below is an example of how to achieve this.
 
 ```python
 from stratestic.backtesting import IterativeBacktester
@@ -341,24 +347,22 @@ trading_costs = 0.1
 
 mom = Momentum(30) # Initialize the strategy object with any values. 
 
-ite = IterativeBacktester(mom, symbol=symbol, trading_costs=trading_costs) # It could also have been the
-                                                                             # IterativeBacktester class
+ite = IterativeBacktester(mom, symbol=symbol, trading_costs=trading_costs) # The VectorizedBacktester class could also be used
 
 ite.load_data() # Load the default sample data. You can pass your own DataFrame to load_data
 
-ite.optimize(dict(window=(40, 90))) # Pass as an argument a dictionary with the parameters as keywords and 
-                                     # with a tuple with the limits to test as the value. In this case we are
-                                     # testing the strategy with the parameter 'window' between the values of
-                                     # 40 and 90
-
+# Pass as an argument a dictionary with the parameters as keywords
+# and with a tuple with the limits to test and the desired step. 
+# In this case we are optimizing the strategy with the parameter 'window' 
+# between the values of 1000 and 1500 with a step of 10
+ite.optimize(dict(window=(1000, 1500, 10)), optimization_metric='Sharpe Ratio')
 ```
+This will output the best parameters and show the corresponding best result. For this example, it would be:
 
-This will output the best parameters and show the corresponding results.
-
-<p align="left">
-  <img src="stratestic/utils/drawings/optimization_results.png" style="width: 100%" />
-</p>
-
+```shell
+100% (50 of 50) |########################| Elapsed Time: 0:01:30 ETA:   0:00:00
+Out[2]: ({'window': 1400.0}, 0.9786648787774422)
+```
 
 <a name="strategies"></a>
 ### Strategies
@@ -416,7 +420,7 @@ vect.load_data() # Load the default sample data. You can pass your own DataFrame
 
 # The optimization parameters are passed as an array of dictionaries containing the 
 # parameter intervals and steps for each individual strategy.
-vect.optimize([dict(sma_s=(20, 40), sma_l=(100, 200)), dict(window=(60, 80))])
+vect.optimize([dict(sma_s=(20, 40, 2), sma_l=(100, 200, 1)), dict(window=(60, 80, 1))])
 ```
 
 <a name="new-strategies"></a>
