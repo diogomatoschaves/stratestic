@@ -128,13 +128,15 @@ class MachineLearning(StrategyMixin):
         Constructs a MachineLearning strategy object with specified
         parameters for model training and feature generation.
         """
+        StrategyMixin.__init__(self, **kwargs)
+
         self._check_estimator(estimator, model_type, load_model)
         self._model_type = model_type
         self._nr_lags = nr_lags
         self._rolling_windows = window
         self._polynomial_degree = polynomial_degree
         self._lag_features = set(lag_features) \
-            if lag_features is not None else []
+            if lag_features is not None else [self._returns_col]
         self._rolling_features = set(rolling_features) \
             if rolling_features is not None else []
         self._excluded_features = set(excluded_features) \
