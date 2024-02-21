@@ -120,7 +120,7 @@ class MachineLearning(StrategyMixin):
         verbose=False,
         load_model=None,
         save_model=True,
-        models_dir='models',
+        models_dir='stratestic/strategies/machine_learning/models',
         data: pd.DataFrame = None,
         **kwargs
     ):
@@ -406,7 +406,6 @@ class MachineLearning(StrategyMixin):
 
         file_path = os.path.abspath(
             os.path.join(
-                os.path.dirname(__file__),
                 self._models_dir,
                 filename + '.pkl'
             )
