@@ -262,9 +262,9 @@ class MachineLearning(StrategyMixin):
         """
 
         if row is None:
-            row = self.data.iloc[-1]
-
-        transformed_row = pd.DataFrame(row[self.X_test.columns]).T.astype(self.X_test.dtypes)
+            transformed_row = self.X_test.iloc[-1:]
+        else:
+            transformed_row = pd.DataFrame(row[self.X_test.columns]).T.astype(self.X_test.dtypes)
 
         return np.sign(self.model.predict(transformed_row)[0])
 
