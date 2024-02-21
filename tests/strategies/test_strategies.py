@@ -186,10 +186,13 @@ class TestStrategy:
         THEN the return value is equal to the expected response
         """
 
+        nr_lags = 4
+
         ml = MachineLearning(
             "Random Forest",
             lag_features=["returns"],
-            data=data,
+            nr_lags=nr_lags,
+            data=data[0:10],
             trade_on_close=False,
             models_dir=tmp_path
         )
@@ -203,3 +206,7 @@ class TestStrategy:
         ml = MachineLearning(load_model=filename, models_dir=tmp_path)
 
         assert ml.model is not None
+
+        ml = MachineLearning(load_model=filename, models_dir=tmp_path, data=data)
+
+        assert ml.X_test.shape[0] == data.shape[0] - nr_lags

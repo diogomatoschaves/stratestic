@@ -163,6 +163,8 @@ class MachineLearning(StrategyMixin):
 
         if self._load_model:
             self.load_model()
+            if data is not None:
+                self.data = self.update_data(data.copy())
         else:
             self.model = None
             self.results = None
@@ -171,7 +173,7 @@ class MachineLearning(StrategyMixin):
             self.y_test = None
             self.y_train = None
 
-        StrategyMixin.__init__(self, data, **kwargs)
+            StrategyMixin.__init__(self, data, **kwargs)
 
     def __repr__(self):
         return f"{self.__class__.__name__}(symbol = {self.symbol}, estimator = {self._estimator}, nr_lags = {self._nr_lags})"
@@ -190,9 +192,6 @@ class MachineLearning(StrategyMixin):
         None
         """
 
-        if self._load_model:
-            return self._get_data()
-
         data = super().update_data(data)
 
         X_lag = get_lag_features(data, columns=self._lag_features, exclude=self._excluded_features,
@@ -204,6 +203,10 @@ class MachineLearning(StrategyMixin):
         y = get_labels(data, returns_col=self._returns_col)
 
         X, y = get_x_y(X_lag, X_roll, y)
+
+        if self._load_model:
+            self.X_test = X
+            return self._get_data()
 
         model, results, X_train, X_test, y_train, y_test = train_model(
             self._estimator, X, y,
@@ -335,6 +338,8 @@ class MachineLearning(StrategyMixin):
         certain environments.
         """
 
+        original_file_name = self._load_model
+
         file_path = os.path.abspath(
             os.path.join(
                 self._models_dir,
@@ -344,13 +349,8 @@ class MachineLearning(StrategyMixin):
 
         ml = dill.load(open(file_path, 'rb'))
 
-        self._original_data = ml._original_data
-        self.model = ml.model
-        self.results = ml.results
-        self.X_train = ml.X_train
-        self.y_train = ml.y_train
-        self.X_test = ml.X_test
-        self.y_test = ml.y_test
+        self.__dict__.update(ml.__dict__)
+        self._load_model = original_file_name
 
         return self._get_data()
 
