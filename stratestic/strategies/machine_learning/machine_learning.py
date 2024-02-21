@@ -337,7 +337,6 @@ class MachineLearning(StrategyMixin):
 
         file_path = os.path.abspath(
             os.path.join(
-                os.path.dirname(__file__),
                 self._models_dir,
                 self._load_model or ''
             )
