@@ -5,6 +5,7 @@ import numpy as np
 from sklearn.base import is_classifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline, FeatureUnion
+from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 
 from stratestic.strategies.machine_learning.helpers._defaults import estimator_mapping, estimator_params
 from stratestic.strategies.machine_learning.helpers._helpers import train_test_split_ts
@@ -13,8 +14,6 @@ from stratestic.utils.logger import configure_logger
 from stratestic.strategies.machine_learning.helpers._pipeline_custom_classes import (
     FeatureSelector,
     CustomOneHotEncoder,
-    CustomStandardScaler,
-    CustomPolynomialFeatures
 )
 
 grid_search_params_defaults = {
@@ -27,7 +26,7 @@ grid_search_params_defaults = {
 configure_logger()
 
 
-def build_pipeline(estimator, polynomial_degree=1):
+def build_pipeline(estimator, polynomial_degree=1, interaction_only=False):
     """
     Constructs a machine learning pipeline with optional grid search capability.
 
@@ -37,6 +36,10 @@ def build_pipeline(estimator, polynomial_degree=1):
         The estimator (machine learning algorithm) to use.
     polynomial_degree : int, optional
         Degree of polynomial features to generate. Default is 1.
+    interaction_only : bool, default=False
+        If `True`, only interaction features are produced: features that are
+        products of at most `degree` *distinct* input features, i.e. terms with
+        power of 2 or higher of the same input feature are excluded.
 
     Returns
     -------
@@ -52,8 +55,12 @@ def build_pipeline(estimator, polynomial_degree=1):
         ('features', FeatureUnion([
             ('num_features', Pipeline([
                 ('selector', FeatureSelector('num')),
-                ('feature_polynomials', CustomPolynomialFeatures(degree=polynomial_degree, include_bias=False)),
-                ('scaling', CustomStandardScaler())
+                ('feature_polynomials', PolynomialFeatures(
+                    degree=polynomial_degree,
+                    include_bias=False,
+                    interaction_only=interaction_only
+                )),
+                ('scaling', StandardScaler())
             ])),
             ('cat_features', Pipeline([
                 ('selector', FeatureSelector('cat')),

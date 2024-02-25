@@ -8,6 +8,4 @@ from stratestic.strategies.machine_learning.helpers._helpers import plot_learnin
 from stratestic.strategies.machine_learning.helpers._pipeline_custom_classes import (
     FeatureSelector,
     CustomOneHotEncoder,
-    CustomStandardScaler,
-    CustomPolynomialFeatures
 )

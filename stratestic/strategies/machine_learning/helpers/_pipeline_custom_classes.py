@@ -1,8 +1,7 @@
 import pandas as pd
 
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder, StandardScaler, PolynomialFeatures
+from sklearn.preprocessing import OneHotEncoder
 
 
 class FeatureSelector(BaseEstimator, TransformerMixin):
@@ -88,71 +87,5 @@ class CustomOneHotEncoder(OneHotEncoder):
     def transform(self, X, y=None, **transform_params):
 
         transformed_data = super(CustomOneHotEncoder, self).transform(X, **transform_params).toarray()
-
-        return pd.DataFrame(data=transformed_data, columns=self.columns)
-
-
-class CustomStandardScaler(StandardScaler):
-    """
-    A custom implementation of StandardScaler to include feature name handling.
-
-    This class extends the StandardScaler to retain feature names for downstream use in the pipeline.
-
-    Parameters
-    ----------
-    None
-
-    Attributes
-    ----------
-    features : list of str
-        Feature names after scaling.
-
-    Methods
-    -------
-    fit(X, y=None, **fit_params)
-        Fits the scaler to X and stores feature names.
-    transform(X, y=None, **transform_params)
-        Scales features of X using the mean and standard deviation.
-    get_feature_names()
-        Returns the feature names after transformation.
-    """
-
-    def fit(self, X, y=None, **fit_params):
-        self.features = X.columns
-
-        return super(CustomStandardScaler, self).fit(X, y, **fit_params)
-
-
-class CustomPolynomialFeatures(PolynomialFeatures):
-    """
-    A custom implementation of PolynomialFeatures that retains original feature names.
-
-    This class extends PolynomialFeatures to include original feature names in the output DataFrame, facilitating interpretability.
-
-    Parameters
-    ----------
-    None
-
-    Attributes
-    ----------
-    columns : list of str
-        Original feature names.
-
-    Methods
-    -------
-    fit(X, y=None)
-        Fits the transformer to X and stores original feature names.
-    transform(X, **transform_params)
-        Transforms X by adding polynomial features and returns a DataFrame with appropriate feature names.
-    """
-
-    def fit(self, X, y=None, **kwargs):
-        self.columns = X.columns
-
-        return super(CustomPolynomialFeatures, self).fit(X, y)
-
-    def transform(self, X, **transform_params):
-
-        transformed_data = super(CustomPolynomialFeatures, self).transform(X)
 
         return pd.DataFrame(data=transformed_data, columns=self.columns)
