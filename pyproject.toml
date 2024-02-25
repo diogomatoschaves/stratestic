@@ -23,6 +23,7 @@ tzdata = "2022.7"
 progressbar2 = "^4.2.0"
 scikit-learn = "^1.0.0"
 dill = "^0.3.8"
+geneal = "^0.7.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.4"
