@@ -3,7 +3,10 @@ from pandas import Timestamp
 expected_performance = 0.985337
 expected_outperformance = -0.030928
 
-expected_optimization_results = ({'ma': 2.0, 'sd': 1.0}, 0)
+expected_optimization_results = {
+    "brute_force": ({'ma': 2.0, 'sd': 1.0}, 0),
+    "gen_alg": ({'ma': 5.0, 'sd': 5.0}, 0),
+}
 
 expected_results = [
     {

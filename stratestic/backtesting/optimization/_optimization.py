@@ -1,5 +1,8 @@
+from typing import Literal
+
 import numpy as np
 from scipy.optimize import brute
+from geneal.genetic_algorithms import ContinuousGenAlgSolver
 
 from stratestic.backtesting.combining import StrategyCombiner
 from stratestic.utils.exceptions import OptimizationParametersInvalid
@@ -40,7 +43,13 @@ optimization_options_factor = {
 }
 
 
-def strategy_optimizer(strategy_runner, opt_params, runner_args, **kwargs):
+def strategy_optimizer(
+    strategy_runner,
+    opt_params: tuple,
+    runner_args: tuple,
+    optimizer: Literal["brute_force", "gen_alg"] = 'brute',
+    **kwargs
+):
     """
     Performs brute force optimization for a trading strategy or a combination of strategies.
 
@@ -54,6 +63,8 @@ def strategy_optimizer(strategy_runner, opt_params, runner_args, **kwargs):
         (start2, stop2, step2), ...).
     runner_args : tuple
         Additional arguments required by the `strategy_runner` function.
+    optimizer : Literal["brute_force", "gen_alg"]
+        Choice of algorithm for the optimization.
     **kwargs : dict
         Additional keyword arguments passed to the `brute` function from scipy.optimize.
 
@@ -68,15 +79,42 @@ def strategy_optimizer(strategy_runner, opt_params, runner_args, **kwargs):
     defined by `opt_params`. The objective function to be optimized is defined by `strategy_runner`.
     """
 
-    opt = brute(
-        strategy_runner, opt_params,
-        runner_args,
-        finish=None,
-        workers=1,
-        **kwargs
-    )
+    if optimizer == "brute_force":
 
-    return opt
+        return brute(
+            strategy_runner,
+            opt_params,
+            runner_args,
+            finish=None,
+            workers=1,
+            **kwargs
+        )
+
+    elif optimizer == "gen_alg":
+
+        gen_alg_params = dict(
+            pop_size=5,
+            max_gen=10,
+            mutation_rate=0.1,
+            selection_rate=0.6,
+            selection_strategy="roulette_wheel",
+            verbose=False,
+            plot_results=True,
+        )
+
+        gen_alg_params.update(**kwargs)
+
+        gen_alg = ContinuousGenAlgSolver(
+            n_genes=len(opt_params),
+            fitness_function=lambda params: strategy_runner(params, *runner_args),
+            variables_type=[type(limits[2]) if len(limits) >=3 else float for limits in opt_params],
+            variables_limits=[limits[0:2] for limits in opt_params],
+            **gen_alg_params
+        )
+
+        gen_alg.solve()
+
+        return gen_alg.best_individual_
 
 
 def adapt_optimization_input(strategy, params):

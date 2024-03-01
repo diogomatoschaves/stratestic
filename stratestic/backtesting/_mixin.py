@@ -2,6 +2,7 @@ import json
 import logging
 import math
 import os
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -123,6 +124,8 @@ class BacktestMixin:
 
         self.bar = None
         self.optimization_steps = 0
+
+        self._optimizer = None
 
     def __getattr__(self, attr):
         """
@@ -273,7 +276,13 @@ class BacktestMixin:
         self.outperf = outperf
         self.results = results
 
-    def optimize(self, params, optimization_metric="Return", **kwargs):
+    def optimize(
+        self,
+        params,
+        optimization_metric="Return",
+        optimizer: Literal["brute_force", "gen_alg"] = 'brute_force',
+        **kwargs
+    ):
         """Optimizes the trading strategy using brute force.
 
         Parameters:
@@ -293,7 +302,9 @@ class BacktestMixin:
             return_pct, sharpe_ratio, sortino_ratio, calmar_ratio, win_rate,
             profit_factor, sqn, expectancy, volatility_pct_annualized,
             max_drawdown, avg_drawdown, max_drawdown_duration
-                **kwargs : dict
+        optimizer : str, optional
+            Choice of algorithm for the optimization.
+        **kwargs : dict
             Additional arguments to pass to the `optimizing` function.
 
         Returns:
@@ -305,23 +316,35 @@ class BacktestMixin:
         """
 
         self._check_metric_input(optimization_metric)
+        self._check_optimizer_input(optimizer)
 
         opt_params, strategy_params_mapping, optimization_steps = adapt_optimization_input(self.strategy, params)
 
-        self.bar = progressbar.ProgressBar(max_value=optimization_steps, redirect_stdout=True)
+        self.bar = progressbar.ProgressBar(
+            max_value=optimization_steps if self._optimizer == 'brute_force' else progressbar.UnknownLength,
+            redirect_stdout=True
+        )
         self.optimization_steps = 0
 
         opt = strategy_optimizer(
-            self._update_and_run, opt_params,
+            self._update_and_run,
+            opt_params,
             (False, False, strategy_params_mapping, params),
+            optimizer,
             **kwargs
         )
 
         if not isinstance(opt, (list, tuple, type(np.array([])))):
             opt = np.array([opt])
 
-        return (get_params_mapping(self.strategy, opt, strategy_params_mapping, params),
-                -self._update_and_run(opt, True, True, strategy_params_mapping, params))
+        self.bar.finish()
+        print()
+
+        optimized_params = get_params_mapping(self.strategy, opt, strategy_params_mapping, params)
+        optimized_result = self._update_and_run(opt, True, True, strategy_params_mapping, params)
+        optimized_result = optimized_result if self._optimizer == 'gen_alg' else -optimized_result
+
+        return optimized_params, optimized_result
 
     def maximum_leverage(self, margin_threshold=None):
         """
@@ -405,6 +428,14 @@ class BacktestMixin:
                              f"Choose one of: {', '.join(optimization_options.keys())}")
         else:
             self.optimization_metric = optimization_options[optimization_metric]
+
+    def _check_optimizer_input(self, optimizer):
+        optimizer_options = ["brute_force", "gen_alg"]
+        if optimizer not in optimizer_options:
+            raise ValueError(f"The selected optimizer is not supported. "
+                             f"Choose one of: {', '.join(optimizer_options)}")
+        else:
+            self._optimizer = optimizer
 
     def _set_index_frequency(self):
         self.index_frequency = self._original_data.index.inferred_freq
@@ -605,6 +636,9 @@ class BacktestMixin:
         result = results[2][self.optimization_metric] if results[2] is not None else -np.inf
 
         result = result * optimization_options_factor[self.optimization_metric]
+
+        if self._optimizer == 'gen_alg':
+            result = -result
 
         return result
 

@@ -1,6 +1,10 @@
+import numpy as np
 from pandas import Timestamp
 
-expected_optimization_results = ({'nr_lags': 2.0}, 13.175614657220974)
+expected_optimization_results = {
+    "brute_force": ({'nr_lags': 2.0}, 13.175614657220974),
+    "gen_alg": ({'nr_lags': 5.0}, np.inf),
+}
 
 expected_results = [
     {
