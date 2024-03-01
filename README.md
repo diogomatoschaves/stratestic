@@ -28,7 +28,9 @@ If you are interested in a trading bot that integrates seamlessly with this libr
 2. [ Iterative Backtesting ](#iterative-backtesting)
 3. [ Backtesting with leverage and margin ](#leverage) <br>
     3.1. [ Calculating the maximum allowed leverage ](#maximum-leverage)
-4. [ Optimization ](#optimization)
+4. [ Optimization ](#optimization) <br>
+    4.1 [ Brute Force ](#brute-force) <br>
+    4.2 [ Genetic Algorithm ](#genetic-algorithm)
 5. [ Strategies ](#strategies) <br>
     5.1. [ Combined strategies](#combined-strategies) <br>
     5.2. [ Create new strategies](#new-strategies) <br>
@@ -329,14 +331,19 @@ Out[2]: 5
 <a name="optimization"></a>
 ### Optimization
 
-Both the iterative or vectorized backtester provide an optimization API that allows to   
-find the combination of parameters that best performs in a backtest, optimizing for a specific metric.
+<a name="brute-force"></a>
+#### Brute Force
+
+Both the iterative and vectorized backtesters offer an optimization API, enabling the discovery 
+of parameter combinations that yield optimal performance in a backtest, with optimization focused 
+on a specific metric.
 
 The options for optimization metrics are: `Return`, `Sharpe Ratio`, `Calmar Ratio`, `Sortino Ratio`, 
 `Win Rate`, `Profit Factor`, `System Quality Number`, `Expectancy`, `Volatility`, `Maximum Drawdown`,
 `Average Drawdown`, `Maximum Drawdown Duration`, `Average Drawdown Duration`. The default is `Return`.
 
-Below is an example of how to achieve this.
+The default optimization algorithm is brute force, entailing an analysis of all possible cases. 
+Below is an example demonstrating how to utilize this API:
 
 ```python
 from stratestic.backtesting import IterativeBacktester
@@ -363,6 +370,63 @@ This will output the best parameters and show the corresponding best result. For
 100% (50 of 50) |########################| Elapsed Time: 0:01:30 ETA:   0:00:00
 Out[2]: ({'window': 1400.0}, 0.9786648787774422)
 ```
+
+<a name="genetic-algorithm"></a>
+#### Genetic Algorithm
+
+In the prior illustration, we utilized the default optimizer—a brute force optimizer—which exhaustively 
+tests all conceivable parameter combinations. However, as the number of parameters grows, the search space 
+expands exponentially, rendering real-time computation unfeasible for extensive input data and parameter 
+combinations. In such scenarios, employing a genetic algorithm can significantly reduce the time required 
+to converge towards an optimum, albeit without guaranteeing the attainment of the global optimum.
+
+Accessing a genetic algorithm solver through this optimization API is exemplified below. This API leverages 
+[geneal](https://github.com/diogomatoschaves/geneal) under the hood. For a comprehensive understanding of 
+the available parameters that can be passed to the solver, please refer to the documentation. 
+All the parameters are optional, but it is recommended to play with them to achieve the best results.
+
+
+```python
+from stratestic.backtesting import IterativeBacktester
+from stratestic.strategies import MovingAverageCrossover
+
+symbol = "BTCUSDT"
+trading_costs = 0.1
+
+mov_avg = MovingAverageCrossover(30, 200)
+
+ite = IterativeBacktester(mov_avg, symbol, amount=1000, trading_costs=trading_costs)
+ite.load_data()
+
+opt_params = {
+    "sma_s": (800, 1200),
+    "sma_l": (1200, 1600)
+}
+
+ite.optimize(
+    opt_params,
+    optimizer='gen_alg',
+    pop_size=10, # population size (number of individuals)
+    max_gen=20, # maximum number of generations
+    mutation_rate=0.1, # mutation rate to apply to the population
+    selection_rate=0.6, # percentage of the population to select for mating
+    selection_strategy="roulette_wheel", # strategy to use for selection. see below for more details
+    fitness_tolerance=(1E-5, 10),   # Loop will be exited if the best fitness value does not change more than
+                                    # 1E-5 for 10 generations
+    verbose=False,  # Whether to print best fitness at every iteration
+    plot_results=True, # Whether to plot the results at the end
+)
+```
+
+```shell
+\ |                                 #               | 191 Elapsed Time: 0:06:38
+Out[2]: ({'sma_s': 1030, 'sma_l': 1206}, 1206.09)
+```
+
+In the above example, we allowed a population of 10 individuals to evolve over 20 generations, 
+resulting in approximately 200 calls to the backtester. Had we opted for the brute force algorithm, 
+the number of calls would have skyrocketed to 160,000 (400 * 400), translating to a significantly 
+longer processing time on a standard machine. 
 
 <a name="strategies"></a>
 ### Strategies
