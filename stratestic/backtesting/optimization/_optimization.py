@@ -47,7 +47,7 @@ def strategy_optimizer(
     strategy_runner,
     opt_params: tuple,
     runner_args: tuple,
-    optimizer: Literal["brute", "gen_alg"] = 'brute',
+    optimizer: Literal["brute_force", "gen_alg"] = 'brute',
     **kwargs
 ):
     """
@@ -63,7 +63,7 @@ def strategy_optimizer(
         (start2, stop2, step2), ...).
     runner_args : tuple
         Additional arguments required by the `strategy_runner` function.
-    optimizer : Literal["brute", "gen_alg"]
+    optimizer : Literal["brute_force", "gen_alg"]
         Choice of algorithm for the optimization.
     **kwargs : dict
         Additional keyword arguments passed to the `brute` function from scipy.optimize.
@@ -79,7 +79,7 @@ def strategy_optimizer(
     defined by `opt_params`. The objective function to be optimized is defined by `strategy_runner`.
     """
 
-    if optimizer == "brute":
+    if optimizer == "brute_force":
 
         return brute(
             strategy_runner,

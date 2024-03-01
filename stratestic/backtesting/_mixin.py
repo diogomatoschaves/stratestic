@@ -280,7 +280,7 @@ class BacktestMixin:
         self,
         params,
         optimization_metric="Return",
-        optimizer: Literal["brute", "gen_alg"] = 'brute',
+        optimizer: Literal["brute_force", "gen_alg"] = 'brute_force',
         **kwargs
     ):
         """Optimizes the trading strategy using brute force.
@@ -321,7 +321,7 @@ class BacktestMixin:
         opt_params, strategy_params_mapping, optimization_steps = adapt_optimization_input(self.strategy, params)
 
         self.bar = progressbar.ProgressBar(
-            max_value=optimization_steps if self._optimizer == 'brute' else progressbar.UnknownLength,
+            max_value=optimization_steps if self._optimizer == 'brute_force' else progressbar.UnknownLength,
             redirect_stdout=True
         )
         self.optimization_steps = 0
@@ -340,8 +340,11 @@ class BacktestMixin:
         self.bar.finish()
         print()
 
-        return (get_params_mapping(self.strategy, opt, strategy_params_mapping, params),
-                -self._update_and_run(opt, True, True, strategy_params_mapping, params))
+        optimized_params = get_params_mapping(self.strategy, opt, strategy_params_mapping, params)
+        optimized_result = self._update_and_run(opt, True, True, strategy_params_mapping, params)
+        optimized_result = optimized_result if self._optimizer == 'gen_alg' else -optimized_result
+
+        return optimized_params, optimized_result
 
     def maximum_leverage(self, margin_threshold=None):
         """
@@ -427,7 +430,7 @@ class BacktestMixin:
             self.optimization_metric = optimization_options[optimization_metric]
 
     def _check_optimizer_input(self, optimizer):
-        optimizer_options = ["brute", "gen_alg"]
+        optimizer_options = ["brute_force", "gen_alg"]
         if optimizer not in optimizer_options:
             raise ValueError(f"The selected optimizer is not supported. "
                              f"Choose one of: {', '.join(optimizer_options)}")

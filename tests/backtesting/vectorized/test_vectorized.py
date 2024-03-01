@@ -57,43 +57,67 @@ class TestVectorizedBacktester:
                 ), print(d, key)
 
     @pytest.mark.parametrize(
-        "strategy,optimization_params,exception",
+        "strategy,optimization_params,optimizer,metric,exception",
         [
             pytest.param(
                 Momentum(2),
                 [dict(window=(2, 4))],
+                "brute_force",
+                "Return",
                 OptimizationParametersInvalid,
                 id="wrong-optimization-parameters-single-strategy",
             ),
             pytest.param(
                 StrategyCombiner([Momentum(2), MovingAverage(2)]),
                 dict(window=(2, 4)),
+                "gen_alg",
+                "Return",
                 OptimizationParametersInvalid,
                 id="wrong-optimization-parameters-multiple-strategy",
             ),
             pytest.param(
                 StrategyCombiner([Momentum(2)]),
                 [dict(window=(2, 4)), dict(ma=(2, 4))],
+                "brute_force",
+                "Return",
                 OptimizationParametersInvalid,
                 id="too-many-optimization-parameters-multiple-strategy",
             ),
             pytest.param(
                 StrategyCombiner([Momentum(2), MovingAverage(2)]),
                 [dict(window=(2, 4))],
+                "gen_alg",
+                "Return",
                 OptimizationParametersInvalid,
                 id="too-few-optimization-parameters-multiple-strategy",
+            ),
+            pytest.param(
+                MovingAverage(2),
+                [dict(ma=(2, 4))],
+                "invalid_optimizer",
+                "Return",
+                ValueError,
+                id="InvalidOptimizer",
+            ),
+            pytest.param(
+                MovingAverage(2),
+                [dict(ma=(2, 4))],
+                "gen_alg",
+                "invalid_metric",
+                ValueError,
+                id="InvalidOptimizationMetric",
             ),
         ],
     )
     def test_optimize_parameters_input_validation(
-        self, strategy, optimization_params, exception
+        self, strategy, optimization_params, optimizer, metric, exception
     ):
         test_data = data.set_index("open_time")
 
         with pytest.raises(exception) as excinfo:
             vect = VectorizedBacktester(strategy)
             vect.load_data(data=test_data)
-            vect.optimize(optimization_params)
+            vect.optimize(optimization_params, optimizer=optimizer, optimization_metric=metric)
 
     @pytest.mark.parametrize(
         "fixture",

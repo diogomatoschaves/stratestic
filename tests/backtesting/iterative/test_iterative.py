@@ -163,13 +163,28 @@ class TestIterativeBacktester:
             backtester.optimize(optimization_params)
 
     @pytest.mark.parametrize(
+        "optimizer,extra_args",
+        [
+            pytest.param(
+                "brute_force",
+                {},
+                id="BruteForce",
+            ),
+            pytest.param(
+                "gen_alg",
+                {"pop_size": 4, "max_gen": 1, "random_state": 42},
+                id="GenAlg",
+            )
+        ]
+    )
+    @pytest.mark.parametrize(
         "fixture",
         [
             pytest.param(fixture, id=fixture_name)
             for fixture_name, fixture in fixtures.items()
         ],
     )
-    def test_optimize_parameters(self, fixture, common_fixture):
+    def test_optimize_parameters(self, fixture, optimizer, extra_args, common_fixture):
         strategy = fixture["in"]["strategy"]
         params = fixture["in"]["params"]
         optimization_params = fixture["in"]["optimization_params"]
@@ -181,11 +196,25 @@ class TestIterativeBacktester:
 
         ite = IterativeBacktester(strategy_instance, trading_costs=trading_costs)
 
-        optimization_results = ite.optimize(*optimization_params)
+        optimization_results = ite.optimize(*optimization_params, optimizer=optimizer, **extra_args)
 
-        assert optimization_results == fixture["out"]["expected_optimization_results"]
+        assert optimization_results == fixture["out"]["expected_optimization_results"][optimizer]
 
-    @pytest.mark.slow
+    @pytest.mark.parametrize(
+        "optimizer,extra_args",
+        [
+            pytest.param(
+                "brute_force",
+                {},
+                id="BruteForce",
+            ),
+            pytest.param(
+                "gen_alg",
+                {"pop_size": 4, "max_gen": 1, "random_state": 42},
+                id="GenAlg",
+            )
+        ]
+    )
     @pytest.mark.parametrize(
         "input_params,optimization_params,expected_results",
         [
@@ -195,7 +224,10 @@ class TestIterativeBacktester:
                     "method": "Unanimous"
                 },
                 [{"window": (2, 4)}, {"ma": (1, 3)}],
-                [{'window': 3.0}, {'ma': 2.0}],
+                {
+                    "brute_force": [{'window': 3.0}, {'ma': 2.0}],
+                    "gen_alg": [{'window': 4.0}, {'ma': 3.0}]
+                },
                 id='2_strategies-unanimous'
             ),
             pytest.param(
@@ -204,7 +236,10 @@ class TestIterativeBacktester:
                     "method": "Majority"
                 },
                 [{"window": (2, 4)}, {"ma": (1, 3)}],
-                [{'window': 3.0}, {'ma': 1.0}],
+                {
+                    "brute_force": [{'window': 3.0}, {'ma': 1.0}],
+                    "gen_alg": [{'window': 4.0}, {'ma': 3.0}]
+                },
                 id='2_strategies-majority'
             ),
             pytest.param(
@@ -213,7 +248,10 @@ class TestIterativeBacktester:
                     "method": "Majority"
                 },
                 [{"window": (2, 4)}, {"ma": (1, 3)}, {}],
-                [{'window': 3.0}, {'ma': 2.0}, {}],
+                {
+                    "brute_force": [{'window': 3.0}, {'ma': 2.0}, {}],
+                    "gen_alg": [{'window': 4.0}, {'ma': 3.0}, {}]
+                },
                 id='3_strategies-majority'
             ),
             pytest.param(
@@ -222,7 +260,10 @@ class TestIterativeBacktester:
                     "method": "Unanimous"
                 },
                 [{"sma_s": (2, 4), "sma_l": (4, 6)}],
-                [{'sma_s': 3.0, 'sma_l': 4.0}],
+                {
+                    "brute_force": [{'sma_s': 3.0, 'sma_l': 4.0}],
+                    "gen_alg": [{'sma_l': 6.0, 'sma_s': 4.0}]
+                },
                 id='1_strategies-unanimous'
             ),
         ],
@@ -232,6 +273,8 @@ class TestIterativeBacktester:
         input_params,
         optimization_params,
         expected_results,
+        optimizer,
+        extra_args,
         common_fixture
     ):
         test_data = data.set_index("open_time")
@@ -240,10 +283,25 @@ class TestIterativeBacktester:
 
         ite = IterativeBacktester(strategy_instance)
 
-        optimization_results, perf = ite.optimize(optimization_params)
+        optimization_results, perf = ite.optimize(optimization_params, optimizer=optimizer, **extra_args)
 
-        assert optimization_results == expected_results
+        assert optimization_results == expected_results[optimizer]
 
+    @pytest.mark.parametrize(
+        "optimizer,extra_args",
+        [
+            pytest.param(
+                "brute_force",
+                {},
+                id="BruteForce",
+            ),
+            pytest.param(
+                "gen_alg",
+                {"pop_size": 4, "max_gen": 1, "random_state": 42},
+                id="GenAlg",
+            )
+        ]
+    )
     @pytest.mark.parametrize(
         "input_params,optimization_params",
         [
@@ -269,6 +327,8 @@ class TestIterativeBacktester:
         self,
         input_params,
         optimization_params,
+        optimizer,
+        extra_args,
         common_fixture
     ):
         test_data = data.set_index("open_time")
@@ -280,12 +340,27 @@ class TestIterativeBacktester:
         ite_2 = IterativeBacktester(strategy_instance_2)
         ite_2.load_data(data=test_data)
 
-        optimization_results_1, perf_1 = ite_1.optimize(optimization_params)
-        optimization_results_2, perf_2 = ite_2.optimize(optimization_params)
+        optimization_results_1, perf_1 = ite_1.optimize(optimization_params, optimizer=optimizer, **extra_args)
+        optimization_results_2, perf_2 = ite_2.optimize(optimization_params, optimizer=optimizer, **extra_args)
 
         assert optimization_results_1 == optimization_results_2
         assert perf_1 == perf_2
 
+    @pytest.mark.parametrize(
+        "optimizer,extra_args",
+        [
+            pytest.param(
+                "brute_force",
+                {},
+                id="BruteForce",
+            ),
+            pytest.param(
+                "gen_alg",
+                {"pop_size": 4, "max_gen": 1, "random_state": 42},
+                id="GenAlg",
+            )
+        ]
+    )
     @pytest.mark.parametrize(
         "input_params,optimization_params",
         [
@@ -311,6 +386,8 @@ class TestIterativeBacktester:
         self,
         input_params,
         optimization_params,
+        optimizer,
+        extra_args,
         common_fixture
     ):
         test_data = data.set_index("open_time")
@@ -321,8 +398,8 @@ class TestIterativeBacktester:
         ite = IterativeBacktester(strategy_instance_1)
         vect = IterativeBacktester(strategy_instance_2)
 
-        optimization_results_1, perf_1 = ite.optimize(optimization_params)
-        optimization_results_2, perf_2 = vect.optimize(optimization_params)
+        optimization_results_1, perf_1 = ite.optimize(optimization_params, optimizer=optimizer, **extra_args)
+        optimization_results_2, perf_2 = vect.optimize(optimization_params, optimizer=optimizer, **extra_args)
 
         assert optimization_results_1 == optimization_results_2
         assert perf_1 == perf_2
