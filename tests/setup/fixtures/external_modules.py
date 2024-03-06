@@ -3,11 +3,8 @@ import logging
 
 import dill
 import matplotlib.pyplot as plt
-import numba
 import plotly
 import pytest
-
-import stratestic.strategies
 
 
 @pytest.fixture

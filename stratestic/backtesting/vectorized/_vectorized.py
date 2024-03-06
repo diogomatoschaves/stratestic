@@ -6,7 +6,11 @@ from stratestic.backtesting._mixin import BacktestMixin
 from stratestic.backtesting.helpers import Trade
 from stratestic.backtesting.helpers.evaluation import STRATEGY_RETURNS, STRATEGY_RETURNS_TC, BUY_AND_HOLD, \
     CUM_SUM_STRATEGY_TC, MARGIN_RATIO, SIDE
-from stratestic.backtesting.helpers.margin import get_maintenance_margin, calculate_liquidation_price, calculate_margin_ratio
+from stratestic.backtesting.helpers.margin import (
+    get_maintenance_margin,
+    calculate_liquidation_price,
+    calculate_margin_ratio
+)
 
 np.seterr(divide='ignore')
 np.seterr(invalid='ignore')
@@ -22,6 +26,31 @@ def process_leveraged_returns(
     amount: numba.uint32,
     leverage: numba.uint32
 ):
+    """
+    Process leveraged returns based on strategy returns and leverage.
+
+    Parameters
+    ----------
+    equity_arr : np.ndarray
+        Array to store equity values at each time step.
+    pnl_arr : np.ndarray
+        Array to store profit/loss values at each time step.
+    amount_arr : np.ndarray
+        Array to store leveraged amount at each time step.
+    notional_value_arr : np.ndarray
+        Array containing notional values at each time step.
+    strategy_returns_tc_arr : np.ndarray
+        Array containing strategy returns at each time step, adjusted for transaction costs.
+    amount : np.uint32
+        Initial amount of capital.
+    leverage : np.uint32
+        Leverage multiplier.
+
+    Returns
+    -------
+    np.ndarray
+        Array containing equity values after processing leveraged returns.
+    """
     equity = amount
     notional_value = amount
     amount = amount * leverage
@@ -172,6 +201,21 @@ class VectorizedBacktester(BacktestMixin):
         return data, trades
 
     def process_leveraged_returns(self, df, trades_df):
+        """
+        Process leveraged returns based on strategy returns and leverage.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            DataFrame containing trading data.
+        trades_df : pd.DataFrame
+            DataFrame containing trade information.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with processed leveraged returns.
+        """
 
         df.loc[df.index[0], self._returns_col] = 0
 

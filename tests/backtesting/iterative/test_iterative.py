@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 from pandas import Timedelta
 
-from stratestic.backtesting import IterativeBacktester
+from stratestic.backtesting import IterativeBacktester, VectorizedBacktester
 from stratestic.backtesting.combining import StrategyCombiner
 from stratestic.strategies import Momentum, MovingAverage, BollingerBands, MovingAverageCrossover
 from stratestic.utils.exceptions import OptimizationParametersInvalid
@@ -14,10 +14,6 @@ from tests.setup.test_setup import get_fixtures
 from tests.setup.fixtures.external_modules import (
     mocked_plotly_figure_show, mocked_dill_dump, mocked_matplotlib_show, mocked_builtin_open
 )
-
-import sys
-
-sys.path.insert(0, 'tests/setup/fixtures/numba.py')
 
 
 current_path = os.path.dirname(os.path.realpath(__file__))
@@ -99,18 +95,6 @@ class TestIterativeBacktester:
         ],
     )
     def test_results_equal_to_vectorized(self, monkeypatch, fixture, common_fixture):
-
-        import sys
-
-        sys.path.insert(0, '../setup/fixtures/numba.py')
-
-        from stratestic.backtesting import VectorizedBacktester
-
-        # def fake_jit(func, nopython, cache, *args, **kwargs):
-        #     print("nopython", nopython)
-        #     return func(*args, *kwargs)
-        #
-        # monkeypatch.setattr(numba, 'jit', fake_jit)
 
         strategy = fixture["in"]["strategy"]
         params = fixture["in"]["params"]
