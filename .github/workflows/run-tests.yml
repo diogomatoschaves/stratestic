@@ -2,7 +2,7 @@
 name: tests
 
 # Run workflow on every push to master branch.
-on: [push, pull_request]
+on: [push]
 
 jobs:
   tests:

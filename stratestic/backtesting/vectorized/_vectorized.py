@@ -1,4 +1,6 @@
 import numpy as np
+import numba
+from numba import jit
 
 from stratestic.backtesting._mixin import BacktestMixin
 from stratestic.backtesting.helpers import Trade
@@ -8,6 +10,37 @@ from stratestic.backtesting.helpers.margin import get_maintenance_margin, calcul
 
 np.seterr(divide='ignore')
 np.seterr(invalid='ignore')
+
+
+@jit(nopython=True, cache=True)
+def process_leveraged_returns(
+    equity_arr: np.array,
+    pnl_arr: np.array,
+    amount_arr: np.array,
+    notional_value_arr: np.array,
+    strategy_returns_tc_arr: np.array,
+    amount: numba.uint32,
+    leverage: numba.uint32
+):
+    equity = amount
+    notional_value = amount
+    amount = amount * leverage
+    for index in np.arange(equity_arr.shape[0]):
+
+        pnl = (np.exp(strategy_returns_tc_arr[index]) - 1) * amount
+
+        equity = equity + pnl
+        if notional_value_arr[index] != notional_value:
+            amount = equity * leverage
+            notional_value = notional_value_arr[index]
+        else:
+            amount = amount + pnl
+
+        pnl_arr[index] = pnl
+        equity_arr[index] = equity
+        amount_arr[index] = amount
+
+    return equity_arr
 
 
 class VectorizedBacktester(BacktestMixin):
@@ -138,9 +171,7 @@ class VectorizedBacktester(BacktestMixin):
 
         return data, trades
 
-    def process_leveraged_returns(self, processed_data, trades_df):
-
-        df = processed_data.copy()
+    def process_leveraged_returns(self, df, trades_df):
 
         df.loc[df.index[0], self._returns_col] = 0
 
@@ -158,23 +189,21 @@ class VectorizedBacktester(BacktestMixin):
         df["equity"] = np.nan
         df["amount"] = np.nan
 
-        equity = self.amount
-        notional_value = self.amount
-        amount = self.amount * self.leverage
-        for index, row in df.iterrows():
+        equity = df["equity"].values
+        amount = df["amount"].values
+        pnl = df["pnl"].values
+        notional_value = df["notional_value"].values
+        strategy_returns_tc = df[STRATEGY_RETURNS_TC].values
 
-            pnl = (np.exp(row[STRATEGY_RETURNS_TC]) - 1) * amount
-
-            equity = equity + pnl
-            if row["notional_value"] != notional_value:
-                amount = equity * self.leverage
-                notional_value = row["notional_value"]
-            else:
-                amount = amount + pnl
-
-            df.loc[index, 'pnl'] = pnl
-            df.loc[index, 'equity'] = equity
-            df.loc[index, 'amount'] = amount
+        df["equity"] = process_leveraged_returns(
+            equity,
+            pnl,
+            amount,
+            notional_value,
+            strategy_returns_tc,
+            self.amount,
+            self.leverage
+        )
 
         df.drop(columns=['pnl', 'amount', 'notional_value'], inplace=True)
 

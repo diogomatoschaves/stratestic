@@ -3,6 +3,7 @@ import logging
 
 import dill
 import matplotlib.pyplot as plt
+import numba
 import plotly
 import pytest
 
@@ -17,11 +18,6 @@ def mocked_plotly_figure_show(mocker):
 @pytest.fixture
 def mocked_matplotlib_show(mocker):
     return mocker.patch.object(plt, "show", lambda: None)
-
-
-@pytest.fixture
-def spy_matplotlib_show(mocker):
-    return mocker.spy(plt, "show")
 
 
 @pytest.fixture
