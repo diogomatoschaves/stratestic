@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 from pandas import Timedelta
 
-from stratestic.backtesting import IterativeBacktester, VectorizedBacktester
+from stratestic.backtesting import IterativeBacktester
 from stratestic.backtesting.combining import StrategyCombiner
 from stratestic.strategies import Momentum, MovingAverage, BollingerBands, MovingAverageCrossover
 from stratestic.utils.exceptions import OptimizationParametersInvalid
@@ -14,6 +14,10 @@ from tests.setup.test_setup import get_fixtures
 from tests.setup.fixtures.external_modules import (
     mocked_plotly_figure_show, mocked_dill_dump, mocked_matplotlib_show, mocked_builtin_open
 )
+
+import sys
+
+sys.path.insert(0, 'tests/setup/fixtures/numba.py')
 
 
 current_path = os.path.dirname(os.path.realpath(__file__))
@@ -86,6 +90,7 @@ class TestIterativeBacktester:
 
         assert ite.index_frequency == Timedelta('0 days 00:05:00')
 
+    @pytest.mark.slow
     @pytest.mark.parametrize(
         "fixture",
         [
@@ -93,7 +98,20 @@ class TestIterativeBacktester:
             for fixture_name, fixture in fixtures.items()
         ],
     )
-    def test_results_equal_to_vectorized(self, fixture, common_fixture):
+    def test_results_equal_to_vectorized(self, monkeypatch, fixture, common_fixture):
+
+        import sys
+
+        sys.path.insert(0, '../setup/fixtures/numba.py')
+
+        from stratestic.backtesting import VectorizedBacktester
+
+        # def fake_jit(func, nopython, cache, *args, **kwargs):
+        #     print("nopython", nopython)
+        #     return func(*args, *kwargs)
+        #
+        # monkeypatch.setattr(numba, 'jit', fake_jit)
+
         strategy = fixture["in"]["strategy"]
         params = fixture["in"]["params"]
         trading_costs = fixture["in"]["trading_costs"]
@@ -102,14 +120,14 @@ class TestIterativeBacktester:
 
         strategy_instance = strategy(**params, data=test_data)
 
-        ite = IterativeBacktester(strategy_instance, trading_costs=trading_costs)
         vect = VectorizedBacktester(strategy_instance, trading_costs=trading_costs)
+        ite = IterativeBacktester(strategy_instance, trading_costs=trading_costs)
 
-        ite.run()
         vect.run()
+        ite.run()
 
-        trades_ite = pd.DataFrame(ite.trades)
         trades_vect = pd.DataFrame(vect.trades)
+        trades_ite = pd.DataFrame(ite.trades)
 
         pd.testing.assert_series_equal(ite.results, vect.results)
         pd.testing.assert_series_equal(

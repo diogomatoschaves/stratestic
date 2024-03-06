@@ -229,6 +229,7 @@ class TestVectorizedBacktester:
         assert optimization_results_1 == optimization_results_2
         assert perf_1 == perf_2
 
+    @pytest.mark.slow
     @pytest.mark.parametrize(
         "fixture",
         [

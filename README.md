@@ -346,7 +346,7 @@ The default optimization algorithm is brute force, entailing an analysis of all 
 Below is an example demonstrating how to utilize this API:
 
 ```python
-from stratestic.backtesting import IterativeBacktester
+from stratestic.backtesting import VectorizedBacktester
 from stratestic.strategies import Momentum
 
 symbol = "BTCUSDT"
@@ -354,20 +354,20 @@ trading_costs = 0.1
 
 mom = Momentum(30) # Initialize the strategy object with any values. 
 
-ite = IterativeBacktester(mom, symbol=symbol, trading_costs=trading_costs) # The VectorizedBacktester class could also be used
+vect = VectorizedBacktester(mom, symbol=symbol, trading_costs=trading_costs) # The VectorizedBacktester class could also be used
 
-ite.load_data() # Load the default sample data. You can pass your own DataFrame to load_data
+vect.load_data() # Load the default sample data. You can pass your own DataFrame to load_data
 
 # Pass as an argument a dictionary with the parameters as keywords
 # and with a tuple with the limits to test and the desired step. 
 # In this case we are optimizing the strategy with the parameter 'window' 
 # between the values of 1000 and 1500 with a step of 10
-ite.optimize(dict(window=(1000, 1500, 10)), optimization_metric='Sharpe Ratio')
+vect.optimize(dict(window=(1000, 1500, 10)), optimization_metric='Sharpe Ratio')
 ```
 This will output the best parameters and show the corresponding best result. For this example, it would be:
 
 ```shell
-100% (50 of 50) |########################| Elapsed Time: 0:01:30 ETA:   0:00:00
+100% (50 of 50) |########################| Elapsed Time: 0:00:26 ETA:   0:00:00
 Out[2]: ({'window': 1400.0}, 0.9786648787774422)
 ```
 
