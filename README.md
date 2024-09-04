@@ -4,8 +4,7 @@
 ![tests_badge](https://github.com/diogomatoschaves/stratestic/actions/workflows/run-tests.yml/badge.svg)
 [![PyPI version](https://badge.fury.io/py/stratestic.svg)](https://badge.fury.io/py/stratestic)
 
-
-The `stratestic` module is a Python package for backtesting, analysing and optimizing trading strategies. 
+`stratestic` is a Python library for backtesting, analysing and optimizing trading strategies. 
 It includes a number of pre-implemented strategies, but it is also possible to create new strategies, as well as
 to combine them. It provides a general Machine Learning strategy, which can be further tweaked to your specific needs.
 
