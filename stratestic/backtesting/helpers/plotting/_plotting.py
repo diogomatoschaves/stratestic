@@ -7,8 +7,6 @@ from plotly.subplots import make_subplots
 from stratestic.backtesting.helpers.evaluation import CUM_SUM_STRATEGY, CUM_SUM_STRATEGY_TC, BUY_AND_HOLD, MARGIN_RATIO
 from stratestic.backtesting.helpers.evaluation.metrics import get_drawdowns, get_dd_durations_limits
 
-pio.renderers.default = "browser"
-
 
 def plot_backtest_results(
     data,
@@ -90,6 +88,10 @@ def plot_backtest_results(
     fig.update_xaxes(row=2, col=1, title_text='Date', showticklabels=True, overwrite=True)
     fig.update_xaxes(row=3, col=1, title_text='Date', showticklabels=True, overwrite=True)
 
+    # open in the browser; set here rather than at import time so that simply
+    # importing the library doesn't override the global plotly renderer
+    pio.renderers.default = "browser"
+
     fig.show()
 
 
@@ -112,7 +114,7 @@ def plot_margin_ratios(fig, data, margin_threshold):
     fig.add_trace(go.Scatter(
         x=[start, end],
         y=[threshold, threshold],
-        name=f'Margin Ratio Threshold',
+        name='Margin Ratio Threshold',
         mode='lines',
         line=dict(
             color='red',
@@ -166,7 +168,7 @@ def plot_equity_curves(fig, data, show_plot_no_tc, index_frequency):
         x.extend(limit)
         x.append(None)
 
-        value = data[CUM_SUM_STRATEGY_TC][limit[0]]
+        value = data[CUM_SUM_STRATEGY_TC].loc[limit[0]]
 
         y.extend([value, value])
         y.append(None)
@@ -187,12 +189,12 @@ def plot_equity_curves(fig, data, show_plot_no_tc, index_frequency):
         max_duration_index = np.argmax(durations)
 
         start, end = limits[max_duration_index]
-        value = data[CUM_SUM_STRATEGY_TC][start]
+        value = data[CUM_SUM_STRATEGY_TC].loc[start]
 
         fig.add_trace(go.Scatter(
             x=[start, end],
             y=[value, value],
-            name=f'Max Drawdown Duration',
+            name='Max Drawdown Duration',
             mode='lines',
             line=dict(
                 color='Red',
@@ -203,7 +205,7 @@ def plot_equity_curves(fig, data, show_plot_no_tc, index_frequency):
     # plot peak equity point
     peak_index = data[CUM_SUM_STRATEGY_TC].argmax()
     peak_time = data.index[peak_index]
-    peak_value = data[CUM_SUM_STRATEGY_TC][peak_index]
+    peak_value = data[CUM_SUM_STRATEGY_TC].iloc[peak_index]
 
     fig.add_trace(go.Scatter(
         x=[peak_time],
@@ -219,7 +221,7 @@ def plot_equity_curves(fig, data, show_plot_no_tc, index_frequency):
     # Plot lowest equity point
     low_index = data[CUM_SUM_STRATEGY_TC].argmin()
     low_time = data.index[low_index]
-    low_value = data[CUM_SUM_STRATEGY_TC][low_index]
+    low_value = data[CUM_SUM_STRATEGY_TC].iloc[low_index]
 
     fig.add_trace(go.Scatter(
         x=[low_time],
@@ -237,8 +239,8 @@ def plot_equity_curves(fig, data, show_plot_no_tc, index_frequency):
 
     max_drawdown_index = drawdowns.argmin()
     max_drawdown_time = drawdowns.index[max_drawdown_index]
-    max_drawdown_equity = data[CUM_SUM_STRATEGY_TC][max_drawdown_index]
-    max_drawdown_value = drawdowns[max_drawdown_index]
+    max_drawdown_equity = data[CUM_SUM_STRATEGY_TC].iloc[max_drawdown_index]
+    max_drawdown_value = drawdowns.iloc[max_drawdown_index]
 
     fig.add_trace(go.Scatter(
         x=[max_drawdown_time],

@@ -116,6 +116,10 @@ def model_evaluation(
             average = 'binary'
         else:
             average = 'weighted'
+            logging.info(
+                "\t\tMore than two classes present (zero returns map to class 0): "
+                "using weighted-average F1/recall/precision."
+            )
 
         accuracy = accuracy_score(y_test, y_pred)
         f1 = f1_score(y_test, y_pred, average=average)

@@ -11,6 +11,7 @@ class Trader:
         self.current_balance = amount
         self.units = units
         self.leverage = 1
+        self.short_model = "static"
         self.nr_trades = 0
         self.trades = []
         self.date_col = 'date'

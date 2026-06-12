@@ -1,5 +1,6 @@
 import re
 
+import numpy as np
 import pandas as pd
 
 escapes = ''.join([chr(char) for char in range(1, 32)])
@@ -17,7 +18,14 @@ def clean_docstring(doc):
 
 
 def geometric_mean(returns: pd.Series) -> float:
-    try:
-        return (1 + returns).prod()**(1 / len(returns)) - 1
-    except ZeroDivisionError:
+    if len(returns) == 0:
         return 0
+
+    growth = (1 + returns).prod()
+
+    # A return <= -100% (possible with leverage) makes the product
+    # non-positive, and a fractional power of it would silently yield NaN.
+    if growth <= 0:
+        return np.nan
+
+    return growth**(1 / len(returns)) - 1

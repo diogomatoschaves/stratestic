@@ -1,11 +1,12 @@
+import numpy as np
 import pandas as pd
 from pandas import Timestamp
 
 expected_data = pd.DataFrame(
     [
         {
-            "open_time": Timestamp("2023-09-01 14:45:00+0000", tz="UTC"),
-            "close_time": Timestamp("2023-09-01 14:49:59.999000+0000", tz="UTC"),
+            "open_time": Timestamp('2023-09-01 14:45:00+0000', tz='UTC'),
+            "close_time": Timestamp('2023-09-01 14:49:59.999000+0000', tz='UTC'),
             "open": 56168.82,
             "high": 56269.99,
             "low": 56080.96,
@@ -24,8 +25,8 @@ expected_data = pd.DataFrame(
             "returns_sma_5_mean": 0.0028756526834570776,
         },
         {
-            "open_time": Timestamp("2023-09-01 14:50:00+0000", tz="UTC"),
-            "close_time": Timestamp("2023-09-01 14:54:59.999000+0000", tz="UTC"),
+            "open_time": Timestamp('2023-09-01 14:50:00+0000', tz='UTC'),
+            "close_time": Timestamp('2023-09-01 14:54:59.999000+0000', tz='UTC'),
             "open": 56191.11,
             "high": 56200.0,
             "low": 56107.98,
@@ -44,8 +45,8 @@ expected_data = pd.DataFrame(
             "returns_sma_5_mean": 0.0021221821103421423,
         },
         {
-            "open_time": Timestamp("2023-09-01 14:55:00+0000", tz="UTC"),
-            "close_time": Timestamp("2023-09-01 14:59:59.999000+0000", tz="UTC"),
+            "open_time": Timestamp('2023-09-01 14:55:00+0000', tz='UTC'),
+            "close_time": Timestamp('2023-09-01 14:59:59.999000+0000', tz='UTC'),
             "open": 56145.0,
             "high": 56211.7,
             "low": 56106.97,
@@ -63,34 +64,15 @@ expected_data = pd.DataFrame(
             "returns_lag1": -0.0008209293091875578,
             "returns_sma_5_mean": 0.000890625965883793,
         },
-        {
-            "open_time": Timestamp("2023-09-01 15:00:00+0000", tz="UTC"),
-            "close_time": Timestamp("2023-09-01 15:04:59.999000+0000", tz="UTC"),
-            "open": 56182.12,
-            "high": 56299.78,
-            "low": 56172.09,
-            "close": 56289.89,
-            "volume": 298.797415,
-            "quote_volume": 16804824.55255641,
-            "trades": 9000,
-            "taker_buy_asset_volume": 139.83665,
-            "taker_buy_quote_volume": 7864202.02549528,
-            "returns": 0.0019165664875115606,
-            "returns_lag5": 0.005926179097336494,
-            "returns_lag4": -0.00170962942015996,
-            "returns_lag3": 0.0003967606653441501,
-            "returns_lag2": -0.0008209293091875578,
-            "returns_lag1": 0.0006607487960858385,
-            "returns_sma_5_mean": 8.870344391880628e-05,
-        },
-    ], index=[9, 10, 11, 12]
+    ],
+    index=[9, 10, 11]
 )
 
 expected_data_set_parameters = pd.DataFrame(
     [
         {
-            "open_time": Timestamp("2023-09-01 14:45:00+0000", tz="UTC"),
-            "close_time": Timestamp("2023-09-01 14:49:59.999000+0000", tz="UTC"),
+            "open_time": Timestamp('2023-09-01 14:45:00+0000', tz='UTC'),
+            "close_time": Timestamp('2023-09-01 14:49:59.999000+0000', tz='UTC'),
             "open": 56168.82,
             "high": 56269.99,
             "low": 56080.96,
@@ -114,8 +96,8 @@ expected_data_set_parameters = pd.DataFrame(
             "returns_sma_5_mean": 0.0028756526834570776,
         },
         {
-            "open_time": Timestamp("2023-09-01 14:50:00+0000", tz="UTC"),
-            "close_time": Timestamp("2023-09-01 14:54:59.999000+0000", tz="UTC"),
+            "open_time": Timestamp('2023-09-01 14:50:00+0000', tz='UTC'),
+            "close_time": Timestamp('2023-09-01 14:54:59.999000+0000', tz='UTC'),
             "open": 56191.11,
             "high": 56200.0,
             "low": 56107.98,
@@ -139,8 +121,8 @@ expected_data_set_parameters = pd.DataFrame(
             "returns_sma_5_mean": 0.0021221821103421423,
         },
         {
-            "open_time": Timestamp("2023-09-01 14:55:00+0000", tz="UTC"),
-            "close_time": Timestamp("2023-09-01 14:59:59.999000+0000", tz="UTC"),
+            "open_time": Timestamp('2023-09-01 14:55:00+0000', tz='UTC'),
+            "close_time": Timestamp('2023-09-01 14:59:59.999000+0000', tz='UTC'),
             "open": 56145.0,
             "high": 56211.7,
             "low": 56106.97,
@@ -163,33 +145,8 @@ expected_data_set_parameters = pd.DataFrame(
             "volume_lag1": 254.091606,
             "returns_sma_5_mean": 0.000890625965883793,
         },
-        {
-            "open_time": Timestamp("2023-09-01 15:00:00+0000", tz="UTC"),
-            "close_time": Timestamp("2023-09-01 15:04:59.999000+0000", tz="UTC"),
-            "open": 56182.12,
-            "high": 56299.78,
-            "low": 56172.09,
-            "close": 56289.89,
-            "volume": 298.797415,
-            "quote_volume": 16804824.55255641,
-            "trades": 9000,
-            "taker_buy_asset_volume": 139.83665,
-            "taker_buy_quote_volume": 7864202.02549528,
-            "returns": 0.0019165664875115606,
-            "returns_lag5": 0.005926179097336494,
-            "volume_lag5": 603.660118,
-            "returns_lag4": -0.00170962942015996,
-            "volume_lag4": 370.500359,
-            "returns_lag3": 0.0003967606653441501,
-            "volume_lag3": 324.51432,
-            "returns_lag2": -0.0008209293091875578,
-            "volume_lag2": 254.091606,
-            "returns_lag1": 0.0006607487960858385,
-            "volume_lag1": 270.145731,
-            "returns_sma_5_mean": 8.870344391880628e-05,
-        },
     ],
-    index=[9, 10, 11, 12]
+    index=[9, 10, 11]
 )
 
-expected_signal = 1
+expected_signal = 1.0

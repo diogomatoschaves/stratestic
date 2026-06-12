@@ -2,14 +2,15 @@ import json
 import logging
 import math
 import os
+from datetime import timedelta
 from typing import Literal
 
 import numpy as np
 import pandas as pd
 import progressbar
-import plotly.io as pio
 
 from stratestic.backtesting.helpers import Trade
+from stratestic.backtesting.helpers._equity import calculate_leveraged_equity, calculate_static_equity, SHORT_MODELS
 from stratestic.backtesting.helpers.evaluation import (
     get_results,
     log_results,
@@ -29,8 +30,6 @@ from stratestic.utils.logger import configure_logger
 config_vars = get_config('general')
 
 configure_logger(config_vars.logger_level)
-
-pio.renderers.default = "browser"
 
 
 class BacktestMixin:
@@ -69,7 +68,8 @@ class BacktestMixin:
         trading_costs,
         leverage=1,
         margin_threshold=0.9,
-        exchange='binance'
+        exchange='binance',
+        short_model='static'
     ):
         """
         Initialize the BacktestMixin object.
@@ -82,14 +82,19 @@ class BacktestMixin:
             The initial amount of capital to allocate for the backtest.
         trading_costs : float
             The transaction costs (e.g., spread, commissions) as a percentage.
-        include_margin : bool, optional
-            Flag indicating whether margin trading is included in the backtest. Default is False.
         leverage : float, optional
             The initial leverage to apply for margin trading. Default is 1.
         margin_threshold : float, optional
             The margin ratio threshold for margin call detection. Default is 0.8.
         exchange : str, optional
             The exchange to simulate the backtest on. Default is 'binance'.
+        short_model : str, optional
+            How short positions are modeled. "static" (default) models a
+            real fixed-units short (pnl = 1 - exit/entry, profit capped at
+            +100%), matching what an actual exchange short pays. "inverse"
+            treats a short as a continuously-rebalanced inverse position
+            (pnl = entry/exit - 1, symmetric with longs in log-return
+            space). Longs are identical under both models.
 
         Raises:
         -------
@@ -98,8 +103,8 @@ class BacktestMixin:
 
         Notes:
         ------
-        If `include_margin` is set to True, the leverage brackets for the specified symbol
-        will be loaded.
+        If a leverage other than 1 is used, margin simulation is enabled and the
+        leverage brackets for the specified symbol are loaded.
         """
         self.exchange = exchange
 
@@ -108,6 +113,7 @@ class BacktestMixin:
 
         self.set_leverage(leverage)
         self.set_margin_threshold(margin_threshold)
+        self.set_short_model(short_model)
 
         self.amount = amount
         self.symbol = symbol
@@ -141,11 +147,15 @@ class BacktestMixin:
         object
             The attribute object.
         """
+        if attr == 'strategy':
+            raise AttributeError(attr)
+
         try:
-            method = getattr(self.strategy, attr)
-            return method
+            return getattr(self.strategy, attr)
         except AttributeError:
-            return getattr(self, attr)
+            raise AttributeError(
+                f"'{type(self).__name__}' object (and its strategy) has no attribute '{attr}'"
+            ) from None
 
     def __repr__(self):
         extra_title = (f"<b>Initial Amount</b> = {self.amount} | "
@@ -164,6 +174,12 @@ class BacktestMixin:
             self.margin_threshold = margin_threshold
         else:
             raise ValueError('Margin threshold must be between 0 and 1.')
+
+    def set_short_model(self, short_model):
+        if short_model in SHORT_MODELS:
+            self.short_model = short_model
+        else:
+            raise ValueError(f"short_model must be one of: {', '.join(SHORT_MODELS)}")
 
     def load_data(self, data=None, csv_path=None):
         """
@@ -215,7 +231,7 @@ class BacktestMixin:
                 )
             )
             csv_path = csv_path if csv_path else default_file_path
-            data = pd.read_csv(csv_path, index_col='date', parse_dates=True)
+            data = pd.read_csv(csv_path, index_col='date', parse_dates=['date'])
             data = data[~data.index.duplicated(keep='last')]  # remove duplicates
 
         self._original_data = data
@@ -441,13 +457,8 @@ class BacktestMixin:
         self.index_frequency = self._original_data.index.inferred_freq
 
         if self.index_frequency is None:
-            data_index = self._original_data.index
-            frequencies = []
-            for i in range(7):
-                index = np.random.randint(0, len(data_index) - 1)
-                frequencies.append(data_index[index + 1] - data_index[index])
-
-            self.index_frequency = max(set(frequencies), key=frequencies.count)
+            diffs = pd.Series(self._original_data.index).diff().dropna()
+            self.index_frequency = diffs.mode().iloc[0]
 
     def _sanitize_equity(self, df, trades):
 
@@ -499,9 +510,50 @@ class BacktestMixin:
 
         return df
 
+    @staticmethod
+    def _get_trade_markers(df):
+        """Build an array that changes value on each bar where a new trade opens."""
+        new_trade = ((df["trades"] != 0) & (df[SIDE] != 0)).values
+
+        return np.cumsum(new_trade).astype(np.float64)
+
     def _calculate_strategy_returns(self, df):
-        df[STRATEGY_RETURNS_TC] = np.log(df['equity'] / df['equity'].shift(1)).fillna(0)
-        df[STRATEGY_RETURNS] = df[STRATEGY_RETURNS_TC] + df["trades"] * self.tc
+        with np.errstate(divide='ignore', invalid='ignore'):
+            df[STRATEGY_RETURNS_TC] = np.log(df['equity'] / df['equity'].shift(1)).fillna(0)
+
+        if self.tc == 0:
+            df[STRATEGY_RETURNS] = df[STRATEGY_RETURNS_TC]
+            df.loc[df.index[0], STRATEGY_RETURNS] = 0
+
+            return df
+
+        # Reconstruct the cost-free curve by re-running the leveraged equity
+        # recurrence on the raw (cost-free) strategy returns. Under leverage,
+        # adding the costs back onto the leveraged log returns would understate
+        # their impact, since each cost's equity hit is amplified by leverage.
+        if self.short_model == 'static':
+            equity_no_tc = calculate_static_equity(
+                df[SIDE].values.astype(np.float64),
+                df[self._returns_col].fillna(0).values,
+                0.0,
+                float(self.amount),
+                float(self.leverage),
+            )
+        else:
+            raw_returns = (df[SIDE].shift(1) * df[self._returns_col]).fillna(0).values
+
+            equity_no_tc = calculate_leveraged_equity(
+                self._get_trade_markers(df),
+                raw_returns,
+                float(self.amount),
+                float(self.leverage),
+            )
+
+        equity_no_tc = pd.Series(equity_no_tc, index=df.index)
+
+        with np.errstate(divide='ignore', invalid='ignore'):
+            df[STRATEGY_RETURNS] = np.log(equity_no_tc / equity_no_tc.shift(1)).fillna(0)
+
         df.loc[df.index[0], STRATEGY_RETURNS] = 0
 
         return df
@@ -633,9 +685,22 @@ class BacktestMixin:
         except ValueError:
             pass
 
-        result = results[2][self.optimization_metric] if results[2] is not None else -np.inf
+        # The objective is minimized (after the factor flips maximize-metrics),
+        # so a failed backtest or an undefined metric (e.g. too few trades for
+        # SQN) must score +inf, never to be selected as the optimum.
+        if results[2] is not None:
+            result = results[2][self.optimization_metric]
 
-        result = result * optimization_options_factor[self.optimization_metric]
+            # duration metrics are timedeltas; optimizers need floats
+            if isinstance(result, timedelta):
+                result = result.total_seconds()
+
+            result = result * optimization_options_factor[self.optimization_metric]
+
+            if np.isnan(result):
+                result = np.inf
+        else:
+            result = np.inf
 
         if self._optimizer == 'gen_alg':
             result = -result

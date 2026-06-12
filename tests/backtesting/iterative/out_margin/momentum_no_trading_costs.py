@@ -1,14 +1,13 @@
+import numpy as np
 from pandas import Timestamp
 
-expected_performance = 1.009399
-expected_outperformance = -0.006867
-
-expected_optimization_results = ({"window": 5.0}, 1.013276)
+expected_performance = 1.009395
+expected_outperformance = -0.00687
 
 expected_results = {
     1: [
         {
-            "close_time": Timestamp("2023-09-01 14:04:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 14:04:59.999000+0000', tz='UTC'),
             "open": 55306.46,
             "high": 55399.68,
             "low": 55217.22,
@@ -29,7 +28,7 @@ expected_results = {
             "accumulated_strategy_returns": 1.0,
         },
         {
-            "close_time": Timestamp("2023-09-01 14:09:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 14:09:59.999000+0000', tz='UTC'),
             "open": 55306.46,
             "high": 55399.68,
             "low": 55217.22,
@@ -50,7 +49,7 @@ expected_results = {
             "accumulated_strategy_returns": 1.0,
         },
         {
-            "close_time": Timestamp("2023-09-01 14:14:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 14:14:59.999000+0000', tz='UTC'),
             "open": 55306.46,
             "high": 55399.68,
             "low": 55217.22,
@@ -71,7 +70,7 @@ expected_results = {
             "accumulated_strategy_returns": 1.0,
         },
         {
-            "close_time": Timestamp("2023-09-01 14:19:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 14:19:59.999000+0000', tz='UTC'),
             "open": 55306.46,
             "high": 55399.68,
             "low": 55217.22,
@@ -92,7 +91,7 @@ expected_results = {
             "accumulated_strategy_returns": 1.0,
         },
         {
-            "close_time": Timestamp("2023-09-01 14:29:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 14:29:59.999000+0000', tz='UTC'),
             "open": 55388.95,
             "high": 55569.95,
             "low": 55388.95,
@@ -113,7 +112,7 @@ expected_results = {
             "accumulated_strategy_returns": 1.0,
         },
         {
-            "close_time": Timestamp("2023-09-01 14:34:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 14:34:59.999000+0000', tz='UTC'),
             "open": 55550.89,
             "high": 56087.68,
             "low": 55550.89,
@@ -134,7 +133,7 @@ expected_results = {
             "accumulated_strategy_returns": 1.0068418286158654,
         },
         {
-            "close_time": Timestamp("2023-09-01 14:39:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 14:39:59.999000+0000', tz='UTC'),
             "open": 55932.48,
             "high": 56333.0,
             "low": 55932.48,
@@ -155,7 +154,7 @@ expected_results = {
             "accumulated_strategy_returns": 1.0128262685320526,
         },
         {
-            "close_time": Timestamp("2023-09-01 14:44:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 14:44:59.999000+0000', tz='UTC'),
             "open": 56260.11,
             "high": 56317.43,
             "low": 56118.31,
@@ -176,7 +175,7 @@ expected_results = {
             "accumulated_strategy_returns": 1.0110961902636069,
         },
         {
-            "close_time": Timestamp("2023-09-01 14:49:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 14:49:59.999000+0000', tz='UTC'),
             "open": 56168.82,
             "high": 56269.99,
             "low": 56080.96,
@@ -197,7 +196,7 @@ expected_results = {
             "accumulated_strategy_returns": 1.0114974330541975,
         },
         {
-            "close_time": Timestamp("2023-09-01 14:54:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 14:54:59.999000+0000', tz='UTC'),
             "open": 56191.11,
             "high": 56200.0,
             "low": 56107.98,
@@ -218,7 +217,7 @@ expected_results = {
             "accumulated_strategy_returns": 1.0106674059086556,
         },
         {
-            "close_time": Timestamp("2023-09-01 14:59:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 14:59:59.999000+0000', tz='UTC'),
             "open": 56145.0,
             "high": 56211.7,
             "low": 56106.97,
@@ -239,7 +238,7 @@ expected_results = {
             "accumulated_strategy_returns": 1.0113354238520749,
         },
         {
-            "close_time": Timestamp("2023-09-01 15:04:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 15:04:59.999000+0000', tz='UTC'),
             "open": 56182.12,
             "high": 56299.78,
             "low": 56172.09,
@@ -252,17 +251,17 @@ expected_results = {
             "returns": 0.0019165664875115606,
             "rolling_returns": 0.0005382866599384979,
             "side": 0,
-            "strategy_returns_tc": -0.0019165664875115203,
-            "equity": 1009.3989885173677,
-            "strategy_returns": -0.0019165664875115203,
+            "strategy_returns_tc": -0.0019202467692459554,
+            "equity": 1009.3952736515433,
+            "strategy_returns": -0.0019202467692459554,
             "accumulated_returns": 1.016265515727322,
-            "accumulated_strategy_returns_tc": 1.0093989885173678,
-            "accumulated_strategy_returns": 1.0093989885173678,
+            "accumulated_strategy_returns_tc": 1.0093952736515435,
+            "accumulated_strategy_returns": 1.0093952736515435,
         },
     ],
     10: [
         {
-            "close_time": Timestamp("2023-09-01 14:04:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 14:04:59.999000+0000', tz='UTC'),
             "open": 55306.46,
             "high": 55399.68,
             "low": 55217.22,
@@ -284,7 +283,7 @@ expected_results = {
             "accumulated_strategy_returns": 1.0,
         },
         {
-            "close_time": Timestamp("2023-09-01 14:09:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 14:09:59.999000+0000', tz='UTC'),
             "open": 55306.46,
             "high": 55399.68,
             "low": 55217.22,
@@ -306,7 +305,7 @@ expected_results = {
             "accumulated_strategy_returns": 1.0,
         },
         {
-            "close_time": Timestamp("2023-09-01 14:14:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 14:14:59.999000+0000', tz='UTC'),
             "open": 55306.46,
             "high": 55399.68,
             "low": 55217.22,
@@ -328,7 +327,7 @@ expected_results = {
             "accumulated_strategy_returns": 1.0,
         },
         {
-            "close_time": Timestamp("2023-09-01 14:19:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 14:19:59.999000+0000', tz='UTC'),
             "open": 55306.46,
             "high": 55399.68,
             "low": 55217.22,
@@ -350,7 +349,7 @@ expected_results = {
             "accumulated_strategy_returns": 1.0,
         },
         {
-            "close_time": Timestamp("2023-09-01 14:29:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 14:29:59.999000+0000', tz='UTC'),
             "open": 55388.95,
             "high": 55569.95,
             "low": 55388.95,
@@ -372,7 +371,7 @@ expected_results = {
             "accumulated_strategy_returns": 1.0,
         },
         {
-            "close_time": Timestamp("2023-09-01 14:34:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 14:34:59.999000+0000', tz='UTC'),
             "open": 55550.89,
             "high": 56087.68,
             "low": 55550.89,
@@ -394,7 +393,7 @@ expected_results = {
             "accumulated_strategy_returns": 1.0684182861586535,
         },
         {
-            "close_time": Timestamp("2023-09-01 14:39:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 14:39:59.999000+0000', tz='UTC'),
             "open": 55932.48,
             "high": 56333.0,
             "low": 55932.48,
@@ -416,7 +415,7 @@ expected_results = {
             "accumulated_strategy_returns": 1.128262685320526,
         },
         {
-            "close_time": Timestamp("2023-09-01 14:44:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 14:44:59.999000+0000', tz='UTC'),
             "open": 56260.11,
             "high": 56317.43,
             "low": 56118.31,
@@ -438,7 +437,7 @@ expected_results = {
             "accumulated_strategy_returns": 1.1109619026360693,
         },
         {
-            "close_time": Timestamp("2023-09-01 14:49:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 14:49:59.999000+0000', tz='UTC'),
             "open": 56168.82,
             "high": 56269.99,
             "low": 56080.96,
@@ -460,7 +459,7 @@ expected_results = {
             "accumulated_strategy_returns": 1.1149743305419753,
         },
         {
-            "close_time": Timestamp("2023-09-01 14:54:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 14:54:59.999000+0000', tz='UTC'),
             "open": 56191.11,
             "high": 56200.0,
             "low": 56107.98,
@@ -482,7 +481,7 @@ expected_results = {
             "accumulated_strategy_returns": 1.1066740590865562,
         },
         {
-            "close_time": Timestamp("2023-09-01 14:59:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 14:59:59.999000+0000', tz='UTC'),
             "open": 56145.0,
             "high": 56211.7,
             "low": 56106.97,
@@ -504,7 +503,7 @@ expected_results = {
             "accumulated_strategy_returns": 1.113354238520748,
         },
         {
-            "close_time": Timestamp("2023-09-01 15:04:59.999000+0000", tz="UTC"),
+            "close_time": Timestamp('2023-09-01 15:04:59.999000+0000', tz='UTC'),
             "open": 56182.12,
             "high": 56299.78,
             "low": 56172.09,
@@ -517,13 +516,13 @@ expected_results = {
             "returns": 0.0019165664875115606,
             "rolling_returns": 0.0005382866599384979,
             "side": 0,
-            "strategy_returns_tc": -0.019332994267678524,
-            "equity": 1092.0364992557104,
+            "strategy_returns_tc": -0.01937044430524658,
+            "equity": 1091.9956032135715,
             "margin_ratio": 0.0,
-            "strategy_returns": -0.019332994267678524,
+            "strategy_returns": -0.01937044430524658,
             "accumulated_returns": 1.016265515727322,
-            "accumulated_strategy_returns_tc": 1.0920364992557106,
-            "accumulated_strategy_returns": 1.0920364992557106,
+            "accumulated_strategy_returns_tc": 1.0919956032135716,
+            "accumulated_strategy_returns": 1.0919956032135716,
         },
-    ]
+    ],
 }

@@ -73,7 +73,7 @@ def test_get_maintenance_margin(notional_value, result):
             10,
             9000,
             1,
-            np.Inf,
+            np.inf,
             id='case_3'
         ),
     ],
@@ -184,5 +184,5 @@ def test_calculate_liquidation_price(leverage, side, result):
 )
 def test_non_existent_exchange(params, method):
 
-    with pytest.raises(Exception) as exception:
+    with pytest.raises(Exception):
         method(*params)

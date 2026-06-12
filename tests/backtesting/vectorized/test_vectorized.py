@@ -48,13 +48,11 @@ class TestVectorizedBacktester:
 
         vect.run()
 
-        print(vect.processed_data.to_dict(orient="records"))
-
         for i, d in enumerate(vect.processed_data.to_dict(orient="records")):
             for key in d:
                 assert d[key] == pytest.approx(
                     fixture["out"]["expected_results"][i][key], 0.2
-                ), print(d, key)
+                )
 
     @pytest.mark.parametrize(
         "strategy,optimization_params,optimizer,metric,exception",
@@ -114,7 +112,7 @@ class TestVectorizedBacktester:
     ):
         test_data = data.set_index("open_time")
 
-        with pytest.raises(exception) as excinfo:
+        with pytest.raises(exception):
             vect = VectorizedBacktester(strategy)
             vect.load_data(data=test_data)
             vect.optimize(optimization_params, optimizer=optimizer, optimization_metric=metric)
@@ -141,9 +139,13 @@ class TestVectorizedBacktester:
 
         optimization_results = vect.optimize(*optimization_params)
 
-        assert (
-            optimization_results == fixture["out"]["expected_optimization_results"]
-        )
+        expected_params, expected_value = fixture["out"]["expected_optimization_results"]
+
+        # the chosen parameters must match exactly; the metric value only up
+        # to float tolerance (bit-exact floats don't reproduce across
+        # Python versions/platforms)
+        assert optimization_results[0] == expected_params
+        assert optimization_results[1] == pytest.approx(expected_value, rel=1e-9)
 
     @pytest.mark.parametrize(
         "input_params,optimization_params,expected_results",
@@ -192,8 +194,6 @@ class TestVectorizedBacktester:
 
         optimization_results, perf = vect.optimize(optimization_params)
 
-        print(optimization_results)
-
         assert optimization_results == expected_results
 
     @pytest.mark.parametrize(
@@ -201,7 +201,7 @@ class TestVectorizedBacktester:
         [
             pytest.param(
                 {"strategies": [Momentum(2), MovingAverage(2)], "method": "Unanimous"},
-                [{"window": (2, 4)}, {"ma": (1, 3)}],
+                [{"window": (2, 4)}, {"ma": (1, 3)  }],
                 id="2_strategies-load_data-unanimous-optimization",
             ),
             pytest.param(

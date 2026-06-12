@@ -58,8 +58,6 @@ class TestIterativeBacktester:
 
         ite.run()
 
-        print(ite.processed_data.to_dict(orient="records"))
-
         for i, d in enumerate(ite.processed_data.to_dict(orient="records")):
             for key in d:
                 assert d[key] == pytest.approx(
@@ -159,7 +157,7 @@ class TestIterativeBacktester:
     ):
         test_data = data.set_index("open_time")
 
-        with pytest.raises(exception) as excinfo:
+        with pytest.raises(exception):
             backtester = IterativeBacktester(strategy)
             backtester.load_data(data=test_data)
             backtester.optimize(optimization_params)
@@ -200,7 +198,13 @@ class TestIterativeBacktester:
 
         optimization_results = ite.optimize(*optimization_params, optimizer=optimizer, **extra_args)
 
-        assert optimization_results == fixture["out"]["expected_optimization_results"][optimizer]
+        expected_params, expected_value = fixture["out"]["expected_optimization_results"][optimizer]
+
+        # the chosen parameters must match exactly; the metric value only up
+        # to float tolerance (bit-exact floats don't reproduce across
+        # Python versions/platforms)
+        assert optimization_results[0] == expected_params
+        assert optimization_results[1] == pytest.approx(expected_value, rel=1e-9)
 
     @pytest.mark.parametrize(
         "optimizer,extra_args",

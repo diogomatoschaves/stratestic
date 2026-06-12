@@ -57,10 +57,10 @@ estimator_params = {
         "Gradient Boosting": dict(max_depth=1, max_features='sqrt'),
     },
     "regression": {
-        "Linear": dict(max_iter=100000, multi_class="ovr"),
+        "Linear": dict(max_iter=100000),
         "Nearest Neighbors": dict(n_neighbors=100, weights='distance'),
-        "Linear SVM": dict(kernel="linear", C=0.025, random_state=42),
-        "RBF SVM": dict(gamma=0.01, C=0.55, degree=4, random_state=42, kernel='rbf'),
+        "Linear SVM": dict(kernel="linear", C=0.025),
+        "RBF SVM": dict(gamma=0.01, C=0.55, degree=4, kernel='rbf'),
         "Gaussian Process": dict(kernel=1.0 * RBF(1.0), random_state=42),
         "Decision Tree": dict(max_depth=5, random_state=42),
         "Random Forest": dict(max_depth=5, n_estimators=200, max_features=1, random_state=42),

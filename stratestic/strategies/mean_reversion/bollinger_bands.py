@@ -18,8 +18,8 @@ class BollingerBands(StrategyMixin):
     -----------
     ma : int
         Moving average window.
-    sd : int
-        Standard deviation window.
+    sd : float
+        Number of standard deviations for the band width.
     data : pd.DataFrame, default None
         Data to use in the strategy.
     **kwargs
@@ -30,7 +30,7 @@ class BollingerBands(StrategyMixin):
     params : OrderedDict
         Ordered dictionary containing the strategy's parameters:
         - `ma`: moving average window.
-        - `sd`: standard deviation window.
+        - `sd`: number of standard deviations.
 
     Methods:
     --------
@@ -40,24 +40,22 @@ class BollingerBands(StrategyMixin):
         Retrieves and prepares the data.
     calculate_positions(self, data)
         Calculate the side for each row in the data.
-    _get_position(self, symbol)
-        Return the side for a given symbol (not implemented).
     get_signal(self, row=None)
         Return the side signal for a given row.
 
     """
 
-    def __init__(self, ma: int, sd: int, data=None, **kwargs):
+    def __init__(self, ma: int, sd: float, data=None, **kwargs):
 
         self._ma = ma
         self._sd = sd
-
-        StrategyMixin.__init__(self, data, **kwargs)
 
         self.params = OrderedDict(
             ma=lambda x: int(x),
             sd=lambda x: float(x),
         )
+
+        StrategyMixin.__init__(self, data, **kwargs)
 
     def __repr__(self):
         return "{}(symbol = {}, ma = {}, sd = {})".format(self.__class__.__name__, self.symbol, self._ma, self._sd)
@@ -78,9 +76,11 @@ class BollingerBands(StrategyMixin):
         """
         data = super().update_data(data)
 
+        rolling_std = data[self._close_col].rolling(self._ma).std()
+
         data["sma"] = data[self._close_col].rolling(self._ma).mean()
-        data["upper"] = data["sma"] + data[self._close_col].rolling(self._ma).std() * self._sd
-        data["lower"] = data["sma"] - data[self._close_col].rolling(self._ma).std() * self._sd
+        data["upper"] = data["sma"] + rolling_std * self._sd
+        data["lower"] = data["sma"] - rolling_std * self._sd
 
         return self.calculate_positions(data)
 
@@ -92,9 +92,6 @@ class BollingerBands(StrategyMixin):
         data[SIDE] = data[SIDE].ffill().fillna(0)
 
         return data
-
-    def _get_position(self, symbol):
-        return None
 
     def get_signal(self, row=None):
 

@@ -1,7 +1,7 @@
 class OptimizationParametersInvalid(Exception):
     def __init__(self, *args):
         if not args:
-            self.message = f"Optimization parameters are not valid."
+            self.message = "Optimization parameters are not valid."
         else:
             self.message = f"{args[0]} optimization parameters are not valid."
 

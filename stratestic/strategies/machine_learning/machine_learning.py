@@ -1,7 +1,7 @@
 import logging
 import os
 from collections import OrderedDict
-from typing import Literal, List, Tuple, Union
+from typing import Literal, List
 
 import dill
 import numpy as np
@@ -56,10 +56,12 @@ class MachineLearning(StrategyMixin):
     verbose : bool, optional
         If True, detailed results will be displayed. Otherwise, a summary is displayed. Default is False.
     save_model : bool, optional
-        If True, the trained model will be saved to a file. Default is True.
+        If True, the trained model is saved to a file after each (re)training,
+        including during parameter optimization. Default is False.
     load_model : str, optional
         The filename of a previously saved model to load. If specified, the model will
-        be loaded instead of trained. Default is None.
+        be loaded instead of trained. Default is None. Note that model files are
+        deserialized with dill and must come from a trusted source.
     models_dir : str, optional
         The directory where models are saved or loaded from. Default is 'models'.
     data : pd.DataFrame, optional
@@ -119,7 +121,7 @@ class MachineLearning(StrategyMixin):
         moving_average: Literal["sma", "ema"] = "sma",
         verbose=False,
         load_model=None,
-        save_model=True,
+        save_model=False,
         models_dir='stratestic/strategies/machine_learning/models',
         data: pd.DataFrame = None,
         **kwargs
@@ -133,7 +135,7 @@ class MachineLearning(StrategyMixin):
         self._check_estimator(estimator, model_type, load_model)
         self._model_type = model_type
         self._nr_lags = nr_lags
-        self._rolling_windows = window
+        self._window = window
         self._polynomial_degree = polynomial_degree
         self._lag_features = set(lag_features) \
             if lag_features is not None else [self._returns_col]
@@ -155,7 +157,7 @@ class MachineLearning(StrategyMixin):
             lag_features=lambda x: x,
             rolling_features=lambda x: x,
             excluded_features=lambda x: x,
-            rolling_windows=lambda x: x,
+            window=lambda x: int(x),
             test_size=lambda x: float(x),
             polynomial_degree=lambda x: int(x),
             moving_average=lambda x: x
@@ -173,7 +175,8 @@ class MachineLearning(StrategyMixin):
             self.y_test = None
             self.y_train = None
 
-            StrategyMixin.__init__(self, data, **kwargs)
+            if data is not None:
+                self.data = self.update_data(data.copy())
 
     def __repr__(self):
         return f"{self.__class__.__name__}(symbol = {self.symbol}, estimator = {self._estimator}, nr_lags = {self._nr_lags})"
@@ -197,7 +200,7 @@ class MachineLearning(StrategyMixin):
         X_lag = get_lag_features(data, columns=self._lag_features, exclude=self._excluded_features,
                                  n_in=self._nr_lags, n_out=1)
 
-        X_roll = get_rolling_features(data, self._rolling_windows, columns=self._rolling_features,
+        X_roll = get_rolling_features(data, self._window, columns=self._rolling_features,
                                       exclude=self._excluded_features, moving_average=self._moving_average)
 
         y = get_labels(data, returns_col=self._returns_col)
@@ -205,6 +208,12 @@ class MachineLearning(StrategyMixin):
         X, y = get_x_y(X_lag, X_roll, y)
 
         if self._load_model:
+            if self.X_train is not None and len(X.index.intersection(self.X_train.index)) > 0:
+                logging.warning(
+                    "The provided data overlaps the loaded model's training period; "
+                    "backtest results on this data will be partially in-sample."
+                )
+
             self.X_test = X
             return self._get_data()
 
@@ -274,7 +283,7 @@ class MachineLearning(StrategyMixin):
             return
 
         if model_type not in estimator_mapping:
-            raise ValueError(f"model_type must be one of 'classification' or 'regression'")
+            raise ValueError("model_type must be one of 'classification' or 'regression'")
 
         if estimator not in estimator_mapping[model_type]:
             raise ValueError(f"{estimator} is not currently supported. Choose an estimator from "
@@ -290,52 +299,21 @@ class MachineLearning(StrategyMixin):
 
     def load_model(self):
         """
-        Deserializes and loads a previously saved machine learning model and strategy
-        configuration from a file. This method uses the `dill` library for deserialization,
-        which can reconstruct Python objects more complex than those supported by the standard
-        `pickle` module.
+        Loads a previously saved strategy (model, configuration, and
+        training/test datasets) from `self._models_dir / self._load_model`.
 
-        The method looks for the file specified by `self._load_model` in the directory `self._models_dir`.
-        It restores the strategy's state, including the trained model, original data, and training/test datasets.
-
-        Parameters
-        ----------
-        None
+        Deserialization uses `dill`, which can execute arbitrary code while
+        unpickling - only load model files from a trusted source.
 
         Returns
         -------
         pd.DataFrame
-            The original dataset associated with the loaded model. This is useful for further analysis
-            or validation of the model's performance on unseen data.
+            The original dataset associated with the loaded model.
 
         Raises
         ------
         FileNotFoundError
-            If the specified model file does not exist in the `self._models_dir` directory.
-        dill.UnpicklingError
-            If there is an issue with deserializing the file, possibly due to corruption or an
-            incompatible dill/pickle format.
-
-        Notes
-        -----
-        - The method assumes that the filename and location are correctly specified by `self._load_model`
-        and `self._models_dir` attributes.
-        - Upon successful loading, the method updates the strategy object's attributes to reflect
-        the state of the loaded model, including data and results.
-        - This method enables the reuse of previously trained models, saving time and computational resources.
-
-        Examples
-        --------
-        >>> strategy_instance.load_model()
-        This will load the model specified by `strategy_instance._load_model` from the disk, restoring
-        the strategy's state including its model and data.
-
-        Side Effects
-        ------------
-        - Updates the strategy instance's attributes (`model`, `results`, `X_train`, `y_train`, `X_test`, `y_test`)
-        to match those of the loaded model.
-        - Accesses and reads a file from disk, which could raise security or performance concerns in
-        certain environments.
+            If the specified model file does not exist in `self._models_dir`.
         """
 
         original_file_name = self._load_model
@@ -354,59 +332,46 @@ class MachineLearning(StrategyMixin):
 
         return self._get_data()
 
+    def get_model_filename(self):
+        """
+        Builds the filename (without extension) used to persist this strategy.
+
+        Includes the estimator parameters, the strategy's own feature/training
+        parameters, and a fingerprint of the training data, so that two runs
+        with different configurations or datasets don't overwrite each other.
+        """
+        parameters = {
+            **estimator_params[self._model_type][self._estimator],
+            "nr_lags": self._nr_lags,
+            "window": self._window,
+            "test_size": self._test_size,
+            "polynomial_degree": self._polynomial_degree,
+            "moving_average": self._moving_average,
+        }
+
+        filename = get_filename(self._estimator, self._model_type, parameters)
+
+        if self.X_train is not None and len(self.X_train) > 0:
+            start = pd.Timestamp(self.X_train.index[0]).strftime('%Y%m%d%H%M')
+            end = pd.Timestamp(self.X_train.index[-1]).strftime('%Y%m%d%H%M')
+            filename = f"{filename}-{start}-{end}-{len(self.X_train)}"
+
+        return filename
+
     def save_model(self):
         """
-        Serializes and saves the current machine learning model and strategy configuration to a file.
-        This method uses the `dill` library to handle serialization, which supports Python objects
-        more complex than those supported by the standard `pickle` module.
-
-        The filename is determined by the strategy's estimator, model type, and specific parameters,
-        ensuring a unique and identifiable filename for each model configuration.
-
-        Parameters
-        ----------
-        None
-
-        Raises
-        ------
-        IOError
-            If there is an issue writing the file to disk, possibly due to permissions or the specified
-            directory not existing.
-
-        Notes
-        -----
-        - The method constructs the filename based on the strategy's estimator, model type, and
-        parameters to ensure uniqueness.
-        - The saved file is placed in the directory specified by `self._models_dir`, which should
-         be set during the strategy's initialization.
-        - This method facilitates model persistence, enabling the strategy to be reused or analyzed
-        at a later time without retraining.
-
-        Examples
-        --------
-        >>> strategy_instance.save_model()
-        This will save the current model to the disk, logging the action if verbose mode is enabled.
-
-        Side Effects
-        ------------
-        - Creates a new file or overwrites an existing file in the specified model directory
-        with the serialized strategy and model.
-        - Logs the saving action if verbose mode is enabled.
+        Serializes the strategy (model, configuration, and datasets) with
+        `dill` into `self._models_dir`, under the name returned by
+        `get_model_filename()`. Overwrites an existing file of the same name.
         """
 
         if self._verbose:
             logging.info("\tsaving model...")
 
-        filename = get_filename(
-            self._estimator,
-            self._model_type,
-            estimator_params[self._model_type][self._estimator]
-        )
-
         file_path = os.path.abspath(
             os.path.join(
                 self._models_dir,
-                filename + '.pkl'
+                self.get_model_filename() + '.pkl'
             )
         )
 

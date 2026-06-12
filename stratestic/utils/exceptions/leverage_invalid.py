@@ -1,7 +1,7 @@
 class LeverageInvalid(Exception):
     def __init__(self, *args):
         if not args:
-            self.message = f"Leverage Invalid."
+            self.message = "Leverage Invalid."
         else:
             self.message = f"{args[0]} is not a valid leverage."
 

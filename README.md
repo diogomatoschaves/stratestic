@@ -27,13 +27,14 @@ If you are interested in a trading bot that integrates seamlessly with this libr
 2. [ Iterative Backtesting ](#iterative-backtesting)
 3. [ Backtesting with leverage and margin ](#leverage) <br>
     3.1. [ Calculating the maximum allowed leverage ](#maximum-leverage)
-4. [ Optimization ](#optimization) <br>
-    4.1 [ Brute Force ](#brute-force) <br>
-    4.2 [ Genetic Algorithm ](#genetic-algorithm)
-5. [ Strategies ](#strategies) <br>
-    5.1. [ Combined strategies](#combined-strategies) <br>
-    5.2. [ Create new strategies](#new-strategies) <br>
-    5.3. [ Machine Learning strategy ](#machine-learning)
+4. [ Short position model ](#short-model)
+5. [ Optimization ](#optimization) <br>
+    5.1 [ Brute Force ](#brute-force) <br>
+    5.2 [ Genetic Algorithm ](#genetic-algorithm)
+6. [ Strategies ](#strategies) <br>
+    6.1. [ Combined strategies](#combined-strategies) <br>
+    6.2. [ Create new strategies](#new-strategies) <br>
+    6.3. [ Machine Learning strategy ](#machine-learning)
 
 <a name="vectorized-backtesting"></a>
 ### Vectorized Backtesting
@@ -325,6 +326,35 @@ Which will output the maximum leverage without a margin call. In the example abo
 
 ```shell
 Out[2]: 5
+```
+
+**Modeling notes.** Liquidations are simulated by zeroing the equity from the first bar where the margin
+ratio reaches 1 - no liquidation fill price is simulated at that bar. Trading costs are charged per leg
+on the traded notional.
+
+<a name="short-model"></a>
+### Short position model
+
+Shorts can be modeled in two ways, selected with the `short_model` parameter on either backtester:
+
+- **`"static"` (default)** - a real fixed-units short: the units sold at entry are bought back at exit,
+  so `pnl = 1 - exit/entry`. Profit is capped at +100% (the price can only fall to zero), and the
+  account is wiped out if the price doubles. This matches what an actual exchange short pays.
+- **`"inverse"`** - a continuously-rebalanced inverse position: `pnl = entry/exit - 1`, symmetric with
+  longs in log-return space. Profit is unbounded as the price falls, and losses on rallies are damped.
+  This is the convention used by many vectorized backtesting frameworks.
+
+For example, a short entered at 100:
+
+| price at exit | static | inverse |
+|---------------|--------|---------|
+| 50            | +50%   | +100%   |
+| 200           | -100%  | -50%    |
+
+Long positions are identical under both models. Select the model like this:
+
+```python
+vect = VectorizedBacktester(strategy, symbol, short_model="inverse")
 ```
 
 <a name="optimization"></a>
@@ -658,6 +688,10 @@ the training part of the data, and subsequently the backtest is performed on the
 This ensures that we're performing out-of-sample backtesting, but it also means that more data is required for 
 a meaningful backtest and good model fit.
 
+The label is the *next* bar's return - exactly what a position formed at the close of the current
+bar earns in the backtest - so the model's reported accuracy/F1 measures the same question the
+backtest pays on, and features may include the current bar (e.g. rolling windows ending at it).
+
 What follows is a simple example to demonstrate its usage. For more detailed options please check the 
 docstring of this strategy.
 
@@ -681,9 +715,13 @@ vect.load_data()
 vect.run()
 ```
 
-By default, the model is saved in a directory as indicated by the parameter `models_dir`. If one wants to load an 
-existing model, the model filename must be passed at initialization. The model will then be loaded, instead of 
-trained. 
+Passing `save_model=True` saves the trained model (with `dill`) into the directory indicated by the
+parameter `models_dir`, under a filename that includes the estimator parameters, the strategy's
+feature/training parameters and a fingerprint of the training data (see `get_model_filename()`).
+To load an existing model, pass the filename at initialization - the model will be loaded instead of
+trained. Only load model files from a trusted source, as deserialization can execute arbitrary code.
+If the data supplied alongside `load_model` overlaps the model's training period, a warning is
+logged, since the backtest would then be partially in-sample.
 
 ```python
 from stratestic.strategies import MachineLearning
@@ -703,4 +741,5 @@ ml.learning_curve()  # Same as the call above.
 <p align="middle">
   <img src="stratestic/utils/drawings/learning-curves.png" style="width: 40%" />
 </p>
+
 

@@ -2,7 +2,34 @@ import logging
 
 import pandas as pd
 
-from stratestic.backtesting.helpers.evaluation.metrics import *
+from stratestic.backtesting.helpers.evaluation.metrics import (
+    get_total_duration,
+    get_start_date,
+    get_end_date,
+    exposure_time,
+    equity_final,
+    equity_peak,
+    return_pct,
+    return_pct_annualized,
+    return_buy_and_hold_pct,
+    volatility_pct_annualized,
+    sharpe_ratio,
+    sortino_ratio,
+    calmar_ratio,
+    max_drawdown_pct,
+    avg_drawdown_pct,
+    max_drawdown_duration,
+    avg_drawdown_duration,
+    win_rate_pct,
+    best_trade_pct,
+    worst_trade_pct,
+    avg_trade_pct,
+    max_trade_duration,
+    avg_trade_duration,
+    expectancy_pct,
+    profit_factor,
+    system_quality_number,
+)
 from stratestic.backtesting.helpers.evaluation._constants import (
     results_sections,
     results_mapping,
@@ -64,7 +91,7 @@ def get_returns_results(results, data, amount, trading_days):
         if "accumulated_returns" in data:
             results["buy_and_hold_return"] = return_buy_and_hold_pct(data[BUY_AND_HOLD])
 
-        return results
+    return results
 
 
 def get_drawdown_results(results, data):
@@ -74,7 +101,7 @@ def get_drawdown_results(results, data):
         results["max_drawdown_duration"] = max_drawdown_duration(data[CUM_SUM_STRATEGY_TC], data[CLOSE_DATE])
         results["avg_drawdown_duration"] = avg_drawdown_duration(data[CUM_SUM_STRATEGY_TC], data[CLOSE_DATE])
 
-        return results
+    return results
 
 
 def get_trades_results(results, trades):
@@ -96,7 +123,7 @@ def get_ratios_results(results, data, trades, trading_days):
 
     if STRATEGY_RETURNS_TC in data:
         results["sharpe_ratio"] = sharpe_ratio(data[STRATEGY_RETURNS_TC], trading_days=trading_days)
-        results["sortino_ratio"] = sortino_ratio(data[STRATEGY_RETURNS_TC])
+        results["sortino_ratio"] = sortino_ratio(data[STRATEGY_RETURNS_TC], trading_days=trading_days)
 
     results["profit_factor"] = profit_factor(trades)
     results["sqn"] = system_quality_number(trades)
