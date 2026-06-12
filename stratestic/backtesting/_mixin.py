@@ -10,7 +10,18 @@ import pandas as pd
 import progressbar
 
 from stratestic.backtesting.helpers import Trade
-from stratestic.backtesting.helpers._equity import calculate_leveraged_equity, calculate_static_equity, SHORT_MODELS
+from stratestic.backtesting.helpers.margin import (
+    get_maintenance_margin,
+    calculate_liquidation_price,
+    calculate_margin_ratio,
+)
+from stratestic.backtesting.helpers._equity import (
+    calculate_leveraged_equity,
+    calculate_static_equity,
+    calculate_static_equity_panel,
+    static_trade_result,
+    SHORT_MODELS,
+)
 from stratestic.backtesting.helpers.evaluation import (
     get_results,
     log_results,
@@ -18,7 +29,7 @@ from stratestic.backtesting.helpers.evaluation import (
     CUM_SUM_STRATEGY,
     CUM_SUM_STRATEGY_TC,
     MARGIN_RATIO,
-    SIDE, STRATEGY_RETURNS_TC, STRATEGY_RETURNS
+    SIDE, WEIGHT, side_col, STRATEGY_RETURNS_TC, STRATEGY_RETURNS
 )
 from stratestic.backtesting.helpers.plotting import plot_backtest_results
 from stratestic.backtesting.optimization import strategy_optimizer, adapt_optimization_input, get_params_mapping, \
@@ -26,6 +37,7 @@ from stratestic.backtesting.optimization import strategy_optimizer, adapt_optimi
 from stratestic.utils.config_parser import get_config
 from stratestic.utils.exceptions import SymbolInvalid, LeverageInvalid
 from stratestic.utils.logger import configure_logger
+from stratestic.utils.panel import is_panel
 
 config_vars = get_config('general')
 
@@ -126,7 +138,10 @@ class BacktestMixin:
 
         if self.leverage != 1:
             self.include_margin = True
-            self._load_leverage_brackets()
+            # panels have no single symbol: their brackets are loaded per
+            # symbol once the panel's symbols are known (at test time)
+            if self.symbol is not None:
+                self._load_leverage_brackets()
 
         self.bar = None
         self.optimization_steps = 0
@@ -388,7 +403,11 @@ class BacktestMixin:
             self.set_margin_threshold(margin_threshold)
 
         self.include_margin = True
-        self._load_leverage_brackets()
+
+        if self.is_panel:
+            self._load_leverage_brackets_panel()
+        else:
+            self._load_leverage_brackets()
 
         left_limit, right_limit = self.leverage_limits
 
@@ -421,6 +440,38 @@ class BacktestMixin:
 
         return leverage
 
+    @property
+    def is_panel(self):
+        """True when the strategy is a multi-symbol (panel) strategy."""
+        return getattr(self.strategy, "is_multi_symbol", False)
+
+    @property
+    def symbols(self):
+        """The traded symbols: the panel's symbols, or the single symbol."""
+        return self.strategy.symbols if self.is_panel else [self.symbol]
+
+    def _check_panel_constraints(self):
+        if self.is_panel:
+            if self.short_model != 'static':
+                raise ValueError(
+                    "Multi-symbol backtests support only short_model='static'; "
+                    "the inverse model has no meaningful multi-asset interpretation."
+                )
+            if self.symbol is not None:
+                raise ValueError(
+                    "Do not pass a symbol to the backtester for multi-symbol "
+                    "strategies; the symbols come from the panel columns."
+                )
+            if self.include_margin:
+                self._load_leverage_brackets_panel()
+        elif self.strategy is not None and is_panel(getattr(self.strategy, "data", None)):
+            raise TypeError(
+                "Got a (symbol, field) panel DataFrame with a single-symbol "
+                "strategy; wrap the strategy in "
+                "stratestic.strategies.multi.BroadcastStrategy to apply it "
+                "per symbol."
+            )
+
     def _test_strategy(self, params=None, leverage=None, print_results=True, plot_results=True, show_plot_no_tc=False):
         """Tests the trading strategy on historical data.
 
@@ -431,6 +482,8 @@ class BacktestMixin:
         """
         if leverage is not None:
             self.set_leverage(leverage)
+
+        self._check_panel_constraints()
 
         self._fix_original_data()
 
@@ -472,8 +525,9 @@ class BacktestMixin:
         if len(no_funds_left_index) > 0:
             df.loc[no_funds_left_index.iloc[0]:, 'equity'] = 0
 
-        # Bring equity to 0 if a margin call happens
-        if self.include_margin:
+        # Bring equity to 0 if a margin call happens. Panels instead model
+        # per-position isolated liquidations inside the recurrence.
+        if self.include_margin and not self.is_panel:
             no_funds_left_index = df[df[MARGIN_RATIO] >= 1].index
 
             if len(no_funds_left_index) > 0:
@@ -517,6 +571,318 @@ class BacktestMixin:
 
         return np.cumsum(new_trade).astype(np.float64)
 
+    def _prepare_panel_arrays(self, data):
+        """
+        Builds the kernel input matrices from a panel with per-symbol side
+        (and optional weight) columns. This is the single source of truth
+        for both engines - the exact-equality invariant depends on both
+        consuming these same floats in the same symbol order.
+
+        Returns (symbols, returns_mat, sides_mat, weights_mat, legs_mat).
+        """
+        symbols = self.strategy.symbols
+        n_bars = len(data)
+
+        returns_mat = np.zeros((n_bars, len(symbols)))
+        sides_mat = np.zeros((n_bars, len(symbols)))
+
+        for j, symbol in enumerate(symbols):
+            returns_mat[:, j] = np.nan_to_num(data[(symbol, self._returns_col)].values)
+            sides_mat[:, j] = np.nan_to_num(data[(symbol, SIDE)].values)
+
+        returns_mat[0, :] = 0.0
+        # positions are force-closed on the final bar, like the scalar path
+        sides_mat[-1, :] = 0.0
+
+        # per-symbol trade legs: |side diff|, with the first bar's entry counted
+        legs_mat = np.abs(np.diff(sides_mat, axis=0, prepend=np.zeros((1, len(symbols)))))
+
+        weights_mat = self._build_weights_matrix(data, symbols, sides_mat)
+
+        return symbols, returns_mat, sides_mat, weights_mat, legs_mat
+
+    def _assemble_panel_processed_data(self, index, symbols, returns_mat, sides_mat, legs_mat, equity_arr):
+        """Flat (string-column) processed-data frame for the panel path,
+        shared by both engines. 'side' is the open-position count so the
+        existing exposure/sanitizer semantics keep working."""
+        processed = pd.DataFrame(index=index)
+
+        for j, symbol in enumerate(symbols):
+            processed[f"{self._returns_col}_{symbol}"] = returns_mat[:, j]
+            processed[side_col(symbol)] = sides_mat[:, j].astype('int')
+
+        processed[SIDE] = (sides_mat != 0).sum(axis=1).astype('int')
+        processed["trades"] = legs_mat.sum(axis=1).astype('int')
+        processed["equity"] = equity_arr
+
+        return processed
+
+    def _run_panel_backtest(self, data):
+        """Vectorized panel path: shared array prep -> kernel -> shared finalization."""
+        symbols, returns_mat, sides_mat, weights_mat, legs_mat = self._prepare_panel_arrays(data)
+
+        liquidations = np.zeros(sides_mat.shape, dtype=np.bool_)
+
+        equity_arr, notionals = calculate_static_equity_panel(
+            sides_mat, returns_mat, weights_mat, liquidations,
+            self.tc, float(self.amount), float(self.leverage),
+        )
+
+        return self._finalize_panel_backtest(
+            data, symbols, returns_mat, sides_mat, weights_mat, legs_mat, equity_arr, notionals
+        )
+
+    def _finalize_panel_backtest(
+        self, data, symbols, returns_mat, sides_mat, weights_mat, legs_mat, equity_arr, notionals
+    ):
+        """
+        Shared tail of the panel backtest for both engines: trade retrieval,
+        the margin/liquidation pass, flat-frame assembly and the common
+        post-processing.
+        """
+        liquidations = np.zeros(sides_mat.shape, dtype=np.bool_)
+
+        trades = self._retrieve_trades_panel(data, symbols, sides_mat, notionals, equity_arr)
+
+        ratio_mat = None
+        if self.include_margin:
+            ratio_mat = self._panel_margin_ratios(data, symbols, trades)
+            liquidations, masked_sides = self._detect_panel_liquidations(
+                ratio_mat, sides_mat, trades, data.index, symbols
+            )
+
+            if liquidations.any():
+                # pass 2: re-run the recurrence with the liquidation flags; the
+                # kernel's liquidation arm caps each position's loss at its
+                # isolated margin. A single second pass only - later trades'
+                # ratios may shift slightly and are not re-detected.
+                sides_mat = masked_sides
+                legs_mat = np.abs(np.diff(sides_mat, axis=0, prepend=np.zeros((1, len(symbols)))))
+
+                equity_arr, notionals = calculate_static_equity_panel(
+                    sides_mat, returns_mat, weights_mat, liquidations,
+                    self.tc, float(self.amount), float(self.leverage),
+                )
+
+                trades = self._retrieve_trades_panel(
+                    data, symbols, sides_mat, notionals, equity_arr, liquidations=liquidations
+                )
+                ratio_mat = self._panel_margin_ratios(data, symbols, trades)
+
+        self._panel_inputs = (sides_mat, returns_mat, weights_mat, liquidations)
+
+        processed = self._assemble_panel_processed_data(
+            data.index, symbols, returns_mat, sides_mat, legs_mat, equity_arr
+        )
+
+        if self.include_margin:
+            # negative balances mean a breach beyond liquidation -> 1, then
+            # clamp into [0, 1], mirroring the scalar sanitizer
+            ratio_mat = np.nan_to_num(ratio_mat)
+            ratio_mat = np.where(ratio_mat < 0, 1.0, ratio_mat)
+            ratio_mat = np.clip(ratio_mat, 0.0, 1.0)
+
+            for j, symbol in enumerate(symbols):
+                processed[f"{MARGIN_RATIO}_{symbol}"] = ratio_mat[:, j]
+            processed[MARGIN_RATIO] = ratio_mat.max(axis=1)
+
+        processed = self._sanitize_equity(processed, trades)
+        processed = self._calculate_strategy_returns(processed)
+        processed = self._calculate_cumulative_returns(processed)
+        trades = self._sanitize_trades(processed, trades)
+
+        return processed, trades
+
+    def _retrieve_trades_panel(self, data, symbols, sides_mat, notionals, equity_arr, liquidations=None):
+        """Per-symbol trade extraction from the recurrence outputs (shared by
+        both engines; their floats are identical by construction)."""
+        trades = []
+
+        for j, symbol in enumerate(symbols):
+            prices_raw = data[(symbol, self._price_col)]
+
+            if not self._trade_on_close:
+                prices_raw = prices_raw.shift(-1)
+
+            last_close = data[(symbol, self._close_col)].iloc[-1]
+
+            sides = sides_mat[:, j]
+            previous = np.concatenate([[0.0], sides[:-1]])
+            entry_bars = np.flatnonzero((sides != previous) & (sides != 0))
+
+            for i in entry_bars:
+                side = sides[i]
+
+                exits = np.flatnonzero(sides[i + 1:] != side)
+                exit_bar = i + 1 + exits[0]  # guaranteed: the last row is forced flat
+
+                entry_raw = prices_raw.iloc[i]
+                exit_raw = prices_raw.iloc[exit_bar]
+
+                if np.isnan(exit_raw):
+                    # forced close on the final bar's close price
+                    exit_raw = last_close
+
+                entry_notional = notionals[i, j]
+
+                if entry_notional == 0:
+                    continue  # zero-weight entry: no capital, no trade
+
+                liquidated = liquidations is not None and liquidations[exit_bar, j]
+
+                if liquidated:
+                    # isolated margin: the position forfeits exactly its margin
+                    profit = -entry_notional / float(self.leverage)
+                    pnl = max(-1.0 / (1.0 + self.tc * side), -1.0)
+                else:
+                    pnl, profit = static_trade_result(
+                        entry_raw, exit_raw, side, self.tc, float(self.leverage), entry_notional
+                    )
+
+                trade = Trade(
+                    entry_date=data.index[i],
+                    exit_date=data.index[exit_bar],
+                    entry_price=entry_raw * (1 + self.tc * side),
+                    exit_price=exit_raw * (1 - self.tc * side),
+                    units=entry_notional / entry_raw,
+                    side=int(side),
+                    equity=equity_arr[exit_bar],
+                    amount=entry_notional,
+                    profit=profit,
+                    pnl=pnl,
+                    symbol=symbol,
+                )
+
+                if self.include_margin:
+                    maintenance_rate, maintenance_amount = get_maintenance_margin(
+                        self._symbol_brackets[symbol],
+                        [trade.units * trade.entry_price],
+                        self.exchange,
+                    )
+                    trade.maintenance_rate = maintenance_rate[0]
+                    trade.maintenance_amount = maintenance_amount[0]
+                    trade.liquidation_price = calculate_liquidation_price(
+                        trade.units,
+                        trade.entry_price,
+                        trade.side,
+                        self.leverage,
+                        trade.maintenance_rate,
+                        trade.maintenance_amount,
+                        exchange=self.exchange,
+                    )
+
+                trades.append(trade)
+
+        # deterministic order shared by both engines:
+        # entry date, then panel symbol order
+        symbol_order = {symbol: j for j, symbol in enumerate(symbols)}
+        trades.sort(key=lambda trade: (trade.entry_date, symbol_order[trade.symbol]))
+
+        return trades
+
+    def _panel_margin_ratios(self, data, symbols, trades):
+        """Per-bar, per-symbol isolated-margin ratios from the open trades,
+        with the scalar conventions: the position entered at bar e is marked
+        from bar e+1 with the bar's worst price (low for longs, high for
+        shorts) against the trade's (cost-adjusted) entry price."""
+        symbol_index = {symbol: j for j, symbol in enumerate(symbols)}
+        ratio_mat = np.zeros((len(data), len(symbols)))
+
+        for trade in trades:
+            j = symbol_index[trade.symbol]
+            entry_bar = data.index.get_loc(trade.entry_date)
+            exit_bar = data.index.get_loc(trade.exit_date)
+
+            if exit_bar <= entry_bar:
+                continue
+
+            mark_field = self._low_col if trade.side == 1 else self._high_col
+            mark_prices = data[(trade.symbol, mark_field)].values[entry_bar + 1:exit_bar + 1]
+
+            ratio_mat[entry_bar + 1:exit_bar + 1, j] = calculate_margin_ratio(
+                self.leverage,
+                trade.units,
+                trade.side,
+                trade.entry_price,
+                mark_prices,
+                trade.maintenance_rate,
+                trade.maintenance_amount,
+                exchange=self.exchange,
+            )
+
+        return ratio_mat
+
+    @staticmethod
+    def _detect_panel_liquidations(ratio_mat, sides_mat, trades, index, symbols):
+        """First bar of each trade whose margin ratio reaches 1 -> liquidation
+        flag; the trade's remaining sides are zeroed (the strategy may
+        re-enter at its next genuine side change)."""
+        liquidations = np.zeros(sides_mat.shape, dtype=np.bool_)
+        masked_sides = sides_mat.copy()
+
+        symbol_index = {symbol: j for j, symbol in enumerate(symbols)}
+
+        for trade in trades:
+            j = symbol_index[trade.symbol]
+            entry_bar = index.get_loc(trade.entry_date)
+            exit_bar = index.get_loc(trade.exit_date)
+
+            segment = ratio_mat[entry_bar + 1:exit_bar + 1, j]
+            # a negative ratio means the margin balance itself went negative
+            # (a gap beyond liquidation) - deeply liquidated, like the scalar
+            # sanitizer's negative -> 1 mapping
+            hits = np.flatnonzero((segment >= 1) | (segment < 0))
+
+            if len(hits) > 0:
+                liquidation_bar = entry_bar + 1 + hits[0]
+                liquidations[liquidation_bar, j] = True
+                # zero the remainder of THIS trade; the bar where the original
+                # trade ended keeps its side (a flip's new entry stays valid)
+                masked_sides[liquidation_bar:exit_bar, j] = 0
+
+        return liquidations, masked_sides
+
+    def _build_weights_matrix(self, data, symbols, sides_mat):
+        """Strategy-provided weights (validated), or equal weight across
+        the active positions of each bar."""
+        weight_columns = [(symbol, WEIGHT) for symbol in symbols if (symbol, WEIGHT) in data.columns]
+
+        if not weight_columns:
+            active = (sides_mat != 0)
+            n_active = active.sum(axis=1)
+
+            with np.errstate(divide='ignore', invalid='ignore'):
+                weights_mat = np.where(active, 1.0 / n_active[:, None], 0.0)
+
+            return weights_mat
+
+        weights_mat = np.zeros_like(sides_mat)
+        for j, symbol in enumerate(symbols):
+            column = data[(symbol, WEIGHT)] if (symbol, WEIGHT) in data.columns else None
+            weights_mat[:, j] = np.nan if column is None else column.values
+
+        active = (sides_mat != 0)
+
+        if np.isnan(weights_mat[active]).any():
+            raise ValueError(
+                "Strategy weights contain NaN on bars with an active position; "
+                "every nonzero side needs an explicit weight."
+            )
+
+        weights_mat = np.nan_to_num(weights_mat)
+
+        if (weights_mat < 0).any():
+            raise ValueError("Strategy weights must be non-negative.")
+
+        active_weight_sums = np.where(active, weights_mat, 0.0).sum(axis=1)
+        if (active_weight_sums > 1 + 1e-9).any():
+            raise ValueError(
+                "The weights of a bar's active positions must sum to at most 1 "
+                f"(max found: {active_weight_sums.max():.6f})."
+            )
+
+        return weights_mat
+
     def _calculate_strategy_returns(self, df):
         with np.errstate(divide='ignore', invalid='ignore'):
             df[STRATEGY_RETURNS_TC] = np.log(df['equity'] / df['equity'].shift(1)).fillna(0)
@@ -531,6 +897,23 @@ class BacktestMixin:
         # recurrence on the raw (cost-free) strategy returns. Under leverage,
         # adding the costs back onto the leveraged log returns would understate
         # their impact, since each cost's equity hit is amplified by leverage.
+        if self.is_panel:
+            sides_mat, returns_mat, weights_mat, liquidations = self._panel_inputs
+
+            equity_no_tc, _ = calculate_static_equity_panel(
+                sides_mat, returns_mat, weights_mat, liquidations,
+                0.0, float(self.amount), float(self.leverage),
+            )
+
+            equity_no_tc = pd.Series(equity_no_tc, index=df.index)
+
+            with np.errstate(divide='ignore', invalid='ignore'):
+                df[STRATEGY_RETURNS] = np.log(equity_no_tc / equity_no_tc.shift(1)).fillna(0)
+
+            df.loc[df.index[0], STRATEGY_RETURNS] = 0
+
+            return df
+
         if self.short_model == 'static':
             equity_no_tc = calculate_static_equity(
                 df[SIDE].values.astype(np.float64),
@@ -559,7 +942,12 @@ class BacktestMixin:
         return df
 
     def _calculate_cumulative_returns(self, data):
-        data[BUY_AND_HOLD] = data[self._returns_col].cumsum().apply(np.exp).fillna(1)
+        if self.is_panel:
+            # equal-weight, unrebalanced buy & hold basket across the symbols
+            returns_mat = self._panel_inputs[1]
+            data[BUY_AND_HOLD] = np.exp(np.cumsum(returns_mat, axis=0)).mean(axis=1)
+        else:
+            data[BUY_AND_HOLD] = data[self._returns_col].cumsum().apply(np.exp).fillna(1)
         data[CUM_SUM_STRATEGY_TC] = data[STRATEGY_RETURNS_TC].cumsum().apply(np.exp).fillna(1)
 
         if STRATEGY_RETURNS in data.columns:
@@ -615,7 +1003,11 @@ class BacktestMixin:
         trades_df = pd.DataFrame(self.trades)
 
         if plot_results:
-            nr_strategies = len([col for col in processed_data.columns if SIDE in col])
+            if self.is_panel:
+                nr_strategies = len(self.symbols)
+            else:
+                nr_strategies = len([col for col in processed_data.columns if SIDE in col])
+
             offset = max(0, nr_strategies - 2)
 
             title = self.__repr__()
@@ -711,7 +1103,14 @@ class BacktestMixin:
         if self._original_data is None:
             self._original_data = self.strategy.data.copy()
 
-            position_columns = [col for col in self._original_data if SIDE in col]
+            if is_panel(self._original_data):
+                # tuple columns: drop per-symbol (symbol, side/weight) fields
+                position_columns = [
+                    col for col in self._original_data
+                    if col[1] in (SIDE, WEIGHT)
+                ]
+            else:
+                position_columns = [col for col in self._original_data if SIDE in col]
 
             self._original_data = self._original_data.drop(columns=position_columns)
 
@@ -728,3 +1127,21 @@ class BacktestMixin:
             self._symbol_bracket = pd.DataFrame(brackets[self.symbol])
         except KeyError:
             raise SymbolInvalid(self.symbol)
+
+    def _load_leverage_brackets_panel(self):
+        """Per-symbol leverage brackets for every panel symbol, reporting all
+        missing symbols at once."""
+        filepath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', config_vars.leverage_brackets_file))
+
+        with open(filepath, 'r') as f:
+            data = json.load(f)
+
+        brackets = {symbol["symbol"]: symbol["brackets"] for symbol in data}
+
+        missing = [symbol for symbol in self.strategy.symbols if symbol not in brackets]
+        if missing:
+            raise SymbolInvalid(", ".join(missing))
+
+        self._symbol_brackets = {
+            symbol: pd.DataFrame(brackets[symbol]) for symbol in self.strategy.symbols
+        }

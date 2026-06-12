@@ -278,28 +278,45 @@ def plot_trades(fig, trades):
         # define marker size accoridng to the trade size
         marker_size = size_trade_markers(trades['units'] * trades["entry_price"])
 
-        # create separate traces for long and short trades
-        fig.add_trace(go.Scatter(
-            x=trades[trades['is_long']]["entry_date"], y=trades.loc[trades['is_long'], 'pnl_pct'],
-            name='Long', mode='markers', marker=dict(
-                symbol='triangle-up',
-                color='limegreen',
-                size=marker_size[trades['is_long']],
-                line=dict(
-                    color='Black',
-                    width=1
+        multi_symbol = (
+            "symbol" in trades
+            and trades["symbol"].notna().any()
+            and trades["symbol"].nunique() > 1
+        )
+
+        if multi_symbol:
+            for symbol, group in trades.groupby("symbol"):
+                _add_trade_traces(
+                    fig, group, marker_size.loc[group.index],
+                    name_prefix=f"{symbol} ", legend_group=symbol,
                 )
+        else:
+            _add_trade_traces(fig, trades, marker_size)
+
+
+def _add_trade_traces(fig, trades, marker_size, name_prefix='', legend_group=None):
+    # create separate traces for long and short trades
+    fig.add_trace(go.Scatter(
+        x=trades[trades['is_long']]["entry_date"], y=trades.loc[trades['is_long'], 'pnl_pct'],
+        name=f'{name_prefix}Long', mode='markers', legendgroup=legend_group, marker=dict(
+            symbol='triangle-up',
+            color='limegreen',
+            size=marker_size[trades['is_long']],
+            line=dict(
+                color='Black',
+                width=1
             )
-        ), row=2, col=1)
-        fig.add_trace(go.Scatter(
-            x=trades[~trades['is_long']]["entry_date"], y=trades.loc[~trades['is_long'], 'pnl_pct'],
-            name='Short', mode='markers', marker=dict(
-                symbol='triangle-down',
-                color='red',
-                size=marker_size[~trades['is_long']],
-                line=dict(
-                    color='White',
-                    width=1
-                )
+        )
+    ), row=2, col=1)
+    fig.add_trace(go.Scatter(
+        x=trades[~trades['is_long']]["entry_date"], y=trades.loc[~trades['is_long'], 'pnl_pct'],
+        name=f'{name_prefix}Short', mode='markers', legendgroup=legend_group, marker=dict(
+            symbol='triangle-down',
+            color='red',
+            size=marker_size[~trades['is_long']],
+            line=dict(
+                color='White',
+                width=1
             )
-        ), row=2, col=1)
+        )
+    ), row=2, col=1)

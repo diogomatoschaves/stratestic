@@ -87,6 +87,13 @@ class StrategyCombiner(StrategyMixin):
             Additional arguments to be passed to the StrategyMixin constructor.
         """
 
+        if data is not None and isinstance(data.columns, pd.MultiIndex):
+            raise NotImplementedError(
+                "StrategyCombiner does not support multi-symbol panels yet. "
+                "Use stratestic.strategies.multi.BroadcastStrategy with a "
+                "single strategy, or combine strategies per symbol."
+            )
+
         StrategyMixin.__init__(self, data, **kwargs)
 
         self._check_input(strategies, method)
@@ -200,6 +207,13 @@ class StrategyCombiner(StrategyMixin):
             Specific strategy object to update data (default is None).
 
         """
+
+        if isinstance(data.columns, pd.MultiIndex):
+            raise NotImplementedError(
+                "StrategyCombiner does not support multi-symbol panels yet. "
+                "Use stratestic.strategies.multi.BroadcastStrategy with a "
+                "single strategy, or combine strategies per symbol."
+            )
 
         self.data = data.copy()
         self.data = self._calculate_returns(self.data)

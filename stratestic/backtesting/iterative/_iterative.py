@@ -1,6 +1,7 @@
 import logging
 
 import numpy as np
+import pandas as pd
 
 from stratestic.backtesting._mixin import BacktestMixin
 from stratestic.backtesting.helpers import Trade
@@ -198,7 +199,10 @@ class IterativeBacktester(BacktestMixin, Trader):
         if data.empty:
             return 0, 0, None
 
-        processed_data, trades = self._iterative_backtest(data, print_results)
+        if self.is_panel:
+            processed_data, trades = self._iterative_backtest_panel(data)
+        else:
+            processed_data, trades = self._iterative_backtest(data, print_results)
 
         results, nr_trades, perf, outperf = self._evaluate_backtest(processed_data, trades)
 
@@ -207,6 +211,131 @@ class IterativeBacktester(BacktestMixin, Trader):
         self.plot_results(self.processed_data, plot_results, show_plot_no_tc=show_plot_no_tc)
 
         return perf, outperf, results
+
+    def _iterative_backtest_panel(self, data):
+        """
+        Multi-symbol (panel) backtest: per-bar signal consumption mirroring
+        calculate_static_equity_panel bar by bar - the same three phases,
+        in the same symbol (column) order, on the same floats - so both
+        engines produce exactly equal results.
+        """
+        symbols = self.strategy.symbols
+        n_bars, n_symbols = len(data), len(symbols)
+        leverage = float(self.leverage)
+
+        returns_mat = np.zeros((n_bars, n_symbols))
+        sides_mat = np.zeros((n_bars, n_symbols))
+        weights_mat = np.zeros((n_bars, n_symbols))
+        equity_arr = np.zeros(n_bars)
+        notionals_mat = np.zeros((n_bars, n_symbols))
+
+        equity = float(self.amount)
+        notional = np.zeros(n_symbols)
+        prev_side = np.zeros(n_symbols)
+        wiped = False
+
+        for i, (timestamp, row) in enumerate(data.iterrows()):
+
+            if i == n_bars - 1:
+                signals = {symbol: 0 for symbol in symbols}  # force close
+            else:
+                signals = self.get_signal(row)
+
+            for j, symbol in enumerate(symbols):
+                sides_mat[i, j] = signals[symbol]
+
+                bar_return = row[(symbol, self._returns_col)]
+                returns_mat[i, j] = 0.0 if (i == 0 or pd.isna(bar_return)) else bar_return
+
+            weights_mat[i, :] = self._get_row_weights(row, symbols, sides_mat[i, :])
+
+            if wiped:
+                continue  # arrays stay zero, mirroring the kernel's latch
+
+            # ---- Phase 1: mark every position to market ----
+            # (the wipeout check happens after Phase 2, like the kernel)
+            for j in range(n_symbols):
+                growth = np.exp(returns_mat[i, j])
+                equity = equity + prev_side[j] * (growth - 1.0) * notional[j]
+                notional[j] = notional[j] * growth
+
+            # ---- Phase 2: exits (and exit leg of flips) ----
+            for j in range(n_symbols):
+                if sides_mat[i, j] != prev_side[j] and prev_side[j] != 0.0:
+                    equity = equity - self.tc * notional[j]
+                    notional[j] = 0.0
+                    prev_side[j] = 0.0
+
+            if equity <= 0.0:
+                wiped = True
+                equity = 0.0
+                continue
+
+            # ---- Phase 3: entries, all sized off the same post-exit equity ----
+            equity_mid = equity
+            for j in range(n_symbols):
+                new_side = sides_mat[i, j]
+                if new_side != 0.0 and new_side != prev_side[j]:
+                    notional[j] = weights_mat[i, j] * equity_mid * leverage / (1.0 + self.tc * new_side)
+                    equity = equity - self.tc * notional[j]
+                    prev_side[j] = new_side
+
+            if equity <= 0.0:
+                wiped = True
+                equity = 0.0
+                continue
+
+            equity_arr[i] = equity
+            notionals_mat[i, :] = notional
+
+        legs_mat = np.abs(np.diff(sides_mat, axis=0, prepend=np.zeros((1, n_symbols))))
+
+        processed, trades = self._finalize_panel_backtest(
+            data, symbols, returns_mat, sides_mat, weights_mat, legs_mat, equity_arr, notionals_mat
+        )
+
+        self.nr_trades = len(trades)
+
+        return processed, trades
+
+    def _get_row_weights(self, row, symbols, row_sides):
+        """Per-bar weights mirroring _build_weights_matrix: the strategy's
+        get_weights(row) when provided, else equal weight across active
+        positions; validated with the same rules."""
+        provided = self.strategy.get_weights(row)
+
+        active = row_sides != 0
+        weights = np.zeros(len(symbols))
+
+        if provided is None:
+            n_active = active.sum()
+            for j in range(len(symbols)):
+                if active[j]:
+                    weights[j] = 1.0 / n_active
+
+            return weights
+
+        for j, symbol in enumerate(symbols):
+            weights[j] = provided.get(symbol, np.nan)
+
+        if np.isnan(weights[active]).any():
+            raise ValueError(
+                "Strategy weights contain NaN on bars with an active position; "
+                "every nonzero side needs an explicit weight."
+            )
+
+        weights = np.nan_to_num(weights)
+
+        if (weights < 0).any():
+            raise ValueError("Strategy weights must be non-negative.")
+
+        if weights[active].sum() > 1 + 1e-9:
+            raise ValueError(
+                "The weights of a bar's active positions must sum to at most 1 "
+                f"(found: {weights[active].sum():.6f})."
+            )
+
+        return weights
 
     def _perform_iteration(self, data, print_results):
         equity = self.amount
