@@ -8,7 +8,18 @@ CUM_SUM_STRATEGY = "accumulated_strategy_returns"
 CUM_SUM_STRATEGY_TC = "accumulated_strategy_returns_tc"
 MARGIN_RATIO = "margin_ratio"
 SIDE = "side"
+WEIGHT = "weight"
 CLOSE_DATE = "close_date"
+
+
+def side_col(symbol=None):
+    """Per-symbol side column name in panel processed data (side_<symbol>).
+
+    Distinct from the StrategyCombiner's side_1..side_n columns, which are
+    matched with the regex side_\\d+ and therefore never collide with
+    symbol names.
+    """
+    return SIDE if symbol is None else f"{SIDE}_{symbol}"
 
 legend_mapping = {
     "accumulated_returns": "Buy & Hold",

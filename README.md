@@ -4,6 +4,7 @@
 ![tests_badge](https://github.com/diogomatoschaves/stratestic/actions/workflows/run-tests.yml/badge.svg)
 [![PyPI version](https://badge.fury.io/py/stratestic.svg)](https://badge.fury.io/py/stratestic)
 
+
 `stratestic` is a Python library for backtesting, analysing and optimizing trading strategies. 
 It includes a number of pre-implemented strategies, but it is also possible to create new strategies, as well as
 to combine them. It provides a general Machine Learning strategy, which can be further tweaked to your specific needs.
@@ -28,13 +29,14 @@ If you are interested in a trading bot that integrates seamlessly with this libr
 3. [ Backtesting with leverage and margin ](#leverage) <br>
     3.1. [ Calculating the maximum allowed leverage ](#maximum-leverage)
 4. [ Short position model ](#short-model)
-5. [ Optimization ](#optimization) <br>
-    5.1 [ Brute Force ](#brute-force) <br>
-    5.2 [ Genetic Algorithm ](#genetic-algorithm)
-6. [ Strategies ](#strategies) <br>
-    6.1. [ Combined strategies](#combined-strategies) <br>
-    6.2. [ Create new strategies](#new-strategies) <br>
-    6.3. [ Machine Learning strategy ](#machine-learning)
+5. [ Multi-symbol backtesting ](#multi-symbol)
+6. [ Optimization ](#optimization) <br>
+    6.1 [ Brute Force ](#brute-force) <br>
+    6.2 [ Genetic Algorithm ](#genetic-algorithm)
+7. [ Strategies ](#strategies) <br>
+    7.1. [ Combined strategies](#combined-strategies) <br>
+    7.2. [ Create new strategies](#new-strategies) <br>
+    7.3. [ Machine Learning strategy ](#machine-learning)
 
 <a name="vectorized-backtesting"></a>
 ### Vectorized Backtesting
@@ -356,6 +358,59 @@ Long positions are identical under both models. Select the model like this:
 ```python
 vect = VectorizedBacktester(strategy, symbol, short_model="inverse")
 ```
+
+<a name="multi-symbol"></a>
+### Multi-symbol backtesting
+
+Both backtesters can run **cross-sectional portfolio backtests** over several symbols at once,
+with shared capital, per-symbol positions and symbol-tagged trades. Multi-symbol data is a
+**panel**: one DataFrame with `(symbol, field)` MultiIndex columns, built from per-symbol OHLCV
+frames with `build_panel`:
+
+```python
+from stratestic.utils.panel import build_panel
+
+panel = build_panel({"BTCUSDT": btc_df, "ETHUSDT": eth_df})  # indexes are aligned (inner join)
+```
+
+**Reusing existing strategies.** Any single-symbol strategy can be applied independently per
+symbol with `BroadcastStrategy` — one shared (and optimizable) parameter set, one clone per
+symbol:
+
+```python
+from stratestic.backtesting import VectorizedBacktester
+from stratestic.strategies import MovingAverageCrossover
+from stratestic.strategies.multi import BroadcastStrategy
+
+strategy = BroadcastStrategy(MovingAverageCrossover(20, 50), data=panel)
+
+vect = VectorizedBacktester(strategy, amount=1000, trading_costs=0.1)
+vect.run()
+vect.optimize({"sma_s": (10, 30), "sma_l": (40, 80)})  # one param set across all symbols
+```
+
+**Cross-sectional strategies** (e.g. pairs trading: long BTC / short ETH) subclass
+`MultiSymbolStrategyMixin` and decide jointly across symbols: `calculate_positions` writes a
+`(symbol, 'side')` column per symbol, `get_signal(row)` returns `{symbol: side}`, and the
+optional `calculate_weights`/`get_weights` hooks emit per-symbol target fractions of capital
+for dynamic sizing (e.g. dollar-neutral books). Without weights, capital is split **equally
+across the active positions** of each bar. The weights of a bar's active positions must be
+non-negative and sum to at most 1.
+
+**Capital and accounting.** The portfolio is one cross-collateralized cash pot: positions are
+sized at entry as `weight × equity × leverage` (entry cost embedded, exactly like the
+single-symbol static model), held positions compound and are never rebalanced, and freed
+capital reaches new entries through the post-exit equity of the same bar. Equity at zero is a
+permanent portfolio wipeout.
+
+**Leverage and margin** work per position with **isolated margin**: each symbol's margin
+ratio is tracked against its own Binance brackets, and a position whose ratio reaches 1 is
+liquidated forfeiting exactly its margin — without dragging the other positions. The reported
+`margin_ratio` is the worst open position's ratio, so `maximum_leverage()` works on panels
+too.
+
+Limitations: panels require the (default) `"static"` short model; liquidation detection is a
+single pass; symbol indexes are aligned to their common window.
 
 <a name="optimization"></a>
 ### Optimization

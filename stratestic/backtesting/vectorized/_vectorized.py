@@ -2,7 +2,11 @@ import numpy as np
 
 from stratestic.backtesting._mixin import BacktestMixin
 from stratestic.backtesting.helpers import Trade
-from stratestic.backtesting.helpers._equity import calculate_leveraged_equity, calculate_static_equity
+
+from stratestic.backtesting.helpers._equity import (
+    calculate_leveraged_equity,
+    calculate_static_equity,
+)
 from stratestic.backtesting.helpers.evaluation import STRATEGY_RETURNS, STRATEGY_RETURNS_TC, BUY_AND_HOLD, \
     CUM_SUM_STRATEGY_TC, MARGIN_RATIO, SIDE
 from stratestic.backtesting.helpers.margin import (
@@ -100,7 +104,10 @@ class VectorizedBacktester(BacktestMixin):
         if data.empty:
             return 0, 0, None
 
-        data, trades = self._vectorized_backtest(data)
+        if self.is_panel:
+            data, trades = self._vectorized_backtest_panel(data)
+        else:
+            data, trades = self._vectorized_backtest(data)
 
         results, nr_trades, perf, outperf = self._evaluate_backtest(data, trades)
 
@@ -149,6 +156,19 @@ class VectorizedBacktester(BacktestMixin):
         trades = self._sanitize_trades(data, trades)
 
         return data, trades
+
+    def _vectorized_backtest_panel(self, data):
+        """
+        Multi-symbol (panel) backtest: per-symbol positions and weights are
+        turned into kernel matrices via the shared preparation (the same
+        floats the iterative engine consumes), run through the portfolio
+        static-equity kernel, and assembled into a flat processed-data
+        frame so all downstream results machinery works unchanged.
+        """
+        data = self.calculate_positions(data)
+        data = self.strategy.calculate_weights(data)
+
+        return self._run_panel_backtest(data)
 
     def process_leveraged_returns(self, df, trades_df):
         """

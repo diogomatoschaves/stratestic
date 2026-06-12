@@ -17,6 +17,8 @@ from stratestic.backtesting.helpers.evaluation._constants import (
     STRATEGY_RETURNS,
     STRATEGY_RETURNS_TC,
     SIDE,
+    WEIGHT,
+    side_col,
     CLOSE_DATE,
     MARGIN_RATIO
 )

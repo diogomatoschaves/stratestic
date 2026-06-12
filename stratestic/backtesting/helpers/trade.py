@@ -39,6 +39,9 @@ class Trade:
     liquidation_price: float = None
     maintenance_rate: float = None
     maintenance_amount: float = None
+    # must stay the LAST field: Trade is constructed positionally in the
+    # iterative engine for all fields up to maintenance_amount
+    symbol: str = None
 
     def calculate_profit(self, prev_equity):
         if self.amount is None:
