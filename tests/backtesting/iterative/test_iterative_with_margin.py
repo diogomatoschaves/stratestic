@@ -59,8 +59,6 @@ class TestIterativeBacktesterMargin:
 
         ite.run()
 
-        print(ite.processed_data.to_dict(orient="records"))
-
         assert round(ite.trades[0].profit / ite.trades[0].pnl) == amount
 
         if leverage > 1:
@@ -69,7 +67,6 @@ class TestIterativeBacktesterMargin:
 
         for i, d in enumerate(ite.processed_data.to_dict(orient="records")):
             for key in d:
-                print(key)
                 assert d[key] == pytest.approx(
                     fixture["out_margin"]["expected_results"][leverage][i][key], 0.2
                 )

@@ -112,7 +112,7 @@ def get_rolling_features(
             elif moving_average == 'ema':
                 moving_av = df[rolling_features].ewm(span=window)
             else:
-                raise 'Method not supported'
+                raise ValueError(f"Method '{moving_average}' is not supported. Choose 'sma' or 'ema'.")
 
             df = df.join(
                 getattr(moving_av, stat)(),
@@ -131,6 +131,12 @@ def get_labels(data, returns_col):
     """
     Extracts labels (target variable) from a DataFrame.
 
+    The label at time t is the *next* bar's return (t+1): this is what a
+    position formed at the close of bar t earns in the backtest, so the
+    model is trained to predict exactly what it is paid on. It also means
+    features may legally include bar t itself (e.g. rolling windows ending
+    at t), since everything up to the close of t is known when trading.
+
     Parameters
     ----------
     data : pd.DataFrame
@@ -141,10 +147,11 @@ def get_labels(data, returns_col):
     Returns
     -------
     pd.Series
-        A Series containing the extracted labels, renamed to 'y'.
+        A Series containing the extracted labels, renamed to 'y'. The last
+        bar is dropped (its next-bar return doesn't exist yet).
     """
 
-    return data[returns_col].rename('y')
+    return data[returns_col].shift(-1).dropna().rename('y')
 
 
 def get_x_y(X_lag, X_roll, y):

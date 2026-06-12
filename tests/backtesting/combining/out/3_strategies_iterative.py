@@ -1,8 +1,9 @@
+import numpy as np
 from pandas import Timestamp
 
 expected_results = [
     {
-        "close_time": Timestamp("2023-09-01 14:29:59.999000+0000", tz="UTC"),
+        "close_time": Timestamp('2023-09-01 14:29:59.999000+0000', tz='UTC'),
         "open": 55388.95,
         "high": 55569.95,
         "low": 55388.95,
@@ -25,7 +26,7 @@ expected_results = [
         "accumulated_strategy_returns": 1.0,
     },
     {
-        "close_time": Timestamp("2023-09-01 14:34:59.999000+0000", tz="UTC"),
+        "close_time": Timestamp('2023-09-01 14:34:59.999000+0000', tz='UTC'),
         "open": 55550.89,
         "high": 56087.68,
         "low": 55550.89,
@@ -48,7 +49,7 @@ expected_results = [
         "accumulated_strategy_returns": 1.0,
     },
     {
-        "close_time": Timestamp("2023-09-01 14:39:59.999000+0000", tz="UTC"),
+        "close_time": Timestamp('2023-09-01 14:39:59.999000+0000', tz='UTC'),
         "open": 55932.48,
         "high": 56333.0,
         "low": 55932.48,
@@ -71,7 +72,7 @@ expected_results = [
         "accumulated_strategy_returns": 1.0,
     },
     {
-        "close_time": Timestamp("2023-09-01 14:44:59.999000+0000", tz="UTC"),
+        "close_time": Timestamp('2023-09-01 14:44:59.999000+0000', tz='UTC'),
         "open": 56260.11,
         "high": 56317.43,
         "low": 56118.31,
@@ -94,7 +95,7 @@ expected_results = [
         "accumulated_strategy_returns": 1.0,
     },
     {
-        "close_time": Timestamp("2023-09-01 14:49:59.999000+0000", tz="UTC"),
+        "close_time": Timestamp('2023-09-01 14:49:59.999000+0000', tz='UTC'),
         "open": 56168.82,
         "high": 56269.99,
         "low": 56080.96,
@@ -117,7 +118,7 @@ expected_results = [
         "accumulated_strategy_returns": 1.0,
     },
     {
-        "close_time": Timestamp("2023-09-01 14:54:59.999000+0000", tz="UTC"),
+        "close_time": Timestamp('2023-09-01 14:54:59.999000+0000', tz='UTC'),
         "open": 56191.11,
         "high": 56200.0,
         "low": 56107.98,
@@ -140,7 +141,7 @@ expected_results = [
         "accumulated_strategy_returns": 1.0,
     },
     {
-        "close_time": Timestamp("2023-09-01 14:59:59.999000+0000", tz="UTC"),
+        "close_time": Timestamp('2023-09-01 14:59:59.999000+0000', tz='UTC'),
         "open": 56145.0,
         "high": 56211.7,
         "low": 56106.97,
@@ -163,7 +164,7 @@ expected_results = [
         "accumulated_strategy_returns": 1.0,
     },
     {
-        "close_time": Timestamp("2023-09-01 15:04:59.999000+0000", tz="UTC"),
+        "close_time": Timestamp('2023-09-01 15:04:59.999000+0000', tz='UTC'),
         "open": 56182.12,
         "high": 56299.78,
         "low": 56172.09,

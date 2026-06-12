@@ -1,9 +1,8 @@
 import numpy as np
-import numba
-from numba import jit
 
 from stratestic.backtesting._mixin import BacktestMixin
 from stratestic.backtesting.helpers import Trade
+from stratestic.backtesting.helpers._equity import calculate_leveraged_equity, calculate_static_equity
 from stratestic.backtesting.helpers.evaluation import STRATEGY_RETURNS, STRATEGY_RETURNS_TC, BUY_AND_HOLD, \
     CUM_SUM_STRATEGY_TC, MARGIN_RATIO, SIDE
 from stratestic.backtesting.helpers.margin import (
@@ -11,65 +10,6 @@ from stratestic.backtesting.helpers.margin import (
     calculate_liquidation_price,
     calculate_margin_ratio
 )
-
-np.seterr(divide='ignore')
-np.seterr(invalid='ignore')
-
-
-@jit(nopython=True, cache=True)
-def process_leveraged_returns(
-    equity_arr: np.array,
-    pnl_arr: np.array,
-    amount_arr: np.array,
-    notional_value_arr: np.array,
-    strategy_returns_tc_arr: np.array,
-    amount: numba.uint32,
-    leverage: numba.uint32
-):
-    """
-    Process leveraged returns based on strategy returns and leverage.
-
-    Parameters
-    ----------
-    equity_arr : np.ndarray
-        Array to store equity values at each time step.
-    pnl_arr : np.ndarray
-        Array to store profit/loss values at each time step.
-    amount_arr : np.ndarray
-        Array to store leveraged amount at each time step.
-    notional_value_arr : np.ndarray
-        Array containing notional values at each time step.
-    strategy_returns_tc_arr : np.ndarray
-        Array containing strategy returns at each time step, adjusted for transaction costs.
-    amount : np.uint32
-        Initial amount of capital.
-    leverage : np.uint32
-        Leverage multiplier.
-
-    Returns
-    -------
-    np.ndarray
-        Array containing equity values after processing leveraged returns.
-    """
-    equity = amount
-    notional_value = amount
-    amount = amount * leverage
-    for index in np.arange(equity_arr.shape[0]):
-
-        pnl = (np.exp(strategy_returns_tc_arr[index]) - 1) * amount
-
-        equity = equity + pnl
-        if notional_value_arr[index] != notional_value:
-            amount = equity * leverage
-            notional_value = notional_value_arr[index]
-        else:
-            amount = amount + pnl
-
-        pnl_arr[index] = pnl
-        equity_arr[index] = equity
-        amount_arr[index] = amount
-
-    return equity_arr
 
 
 class VectorizedBacktester(BacktestMixin):
@@ -83,7 +23,8 @@ class VectorizedBacktester(BacktestMixin):
         amount=1000,
         trading_costs=0.0,
         leverage=1,
-        margin_threshold=0.8
+        margin_threshold=0.8,
+        short_model='static'
     ):
         """
         Initializes the Backtester object.
@@ -102,6 +43,11 @@ class VectorizedBacktester(BacktestMixin):
             The initial leverage to apply for margin trading. Default is 1.
         margin_threshold : float, optional
             The margin ratio threshold for margin call detection. Default is 0.8.
+        short_model : str, optional
+            How short positions are modeled: "static" (default, real
+            fixed-units short) or "inverse" (continuously rebalanced inverse
+            position). See BacktestMixin for details. Longs are identical
+            under both.
 
         Notes
         -----
@@ -116,7 +62,10 @@ class VectorizedBacktester(BacktestMixin):
         >>> backtester = VectorizedBacktester(strategy=strategy, symbol='BTCUSDT', amount=5000, trading_costs=0.01)
         """
 
-        BacktestMixin.__init__(self, symbol, amount, trading_costs, leverage, margin_threshold)
+        BacktestMixin.__init__(
+            self, symbol, amount, trading_costs, leverage, margin_threshold,
+            short_model=short_model
+        )
 
         self.strategy = strategy
 
@@ -172,7 +121,8 @@ class VectorizedBacktester(BacktestMixin):
 
         Returns:
         --------
-        None
+        tuple
+            The processed DataFrame and the list of Trade objects.
         """
         data = self.calculate_positions(data)
         data["trades"] = data.side.diff().fillna(0).abs()
@@ -220,36 +170,24 @@ class VectorizedBacktester(BacktestMixin):
         df.loc[df.index[0], self._returns_col] = 0
 
         if len(trades_df) == 0:
-            df["equity"] = 0
+            df["equity"] = self.amount
             return df
 
-        df_filter = (df.trades != 0) & (df.side != 0)
-
-        df.loc[df[df_filter].index, 'notional_value'] = trades_df["equity"].shift(1).values
-        df.loc[df.index[0], 'notional_value'] = self.amount
-        df['notional_value'].ffill(inplace=True)
-
-        df["pnl"] = np.nan
-        df["equity"] = np.nan
-        df["amount"] = np.nan
-
-        equity = df["equity"].values
-        amount = df["amount"].values
-        pnl = df["pnl"].values
-        notional_value = df["notional_value"].values
-        strategy_returns_tc = df[STRATEGY_RETURNS_TC].values
-
-        df["equity"] = process_leveraged_returns(
-            equity,
-            pnl,
-            amount,
-            notional_value,
-            strategy_returns_tc,
-            self.amount,
-            self.leverage
-        )
-
-        df.drop(columns=['pnl', 'amount', 'notional_value'], inplace=True)
+        if self.short_model == 'static':
+            df["equity"] = calculate_static_equity(
+                df[SIDE].values.astype(np.float64),
+                df[self._returns_col].fillna(0).values,
+                self.tc,
+                float(self.amount),
+                float(self.leverage),
+            )
+        else:
+            df["equity"] = calculate_leveraged_equity(
+                self._get_trade_markers(df),
+                df[STRATEGY_RETURNS_TC].values,
+                float(self.amount),
+                float(self.leverage),
+            )
 
         return df
 
@@ -293,14 +231,22 @@ class VectorizedBacktester(BacktestMixin):
         col = list(set(trades.columns).difference(set(cols)))[0]
 
         trades = trades.rename(columns={self._price_col: "entry_price", col: "entry_date"})
+        trades["entry_price_raw"] = trades["entry_price"]
+        trades["exit_price_raw"] = trades["entry_price"].shift(-1)
         trades["exit_price"] = trades["entry_price"].shift(-1) * (1 - trading_costs * trades[SIDE])
         trades["entry_price"] = trades["entry_price"] * (1 + trading_costs * trades[SIDE])
         trades["exit_date"] = trades["entry_date"].shift(-1)
         trades = trades[trades.side != 0]
 
+        # a still-open last trade is force-closed on the final close price,
+        # with the exit trading cost applied like any other exit
+        last_close = processed_data.loc[processed_data.index[-1], self._close_col]
+        trades["exit_price_raw"] = np.where(
+            np.isnan(trades['exit_price_raw']), last_close, trades['exit_price_raw']
+        )
         trades["exit_price"] = np.where(
             np.isnan(trades['exit_price']),
-            processed_data.loc[processed_data.index[-1], self._close_col],
+            last_close * (1 - trading_costs * trades[SIDE]),
             trades['exit_price']
         )
 
@@ -314,13 +260,25 @@ class VectorizedBacktester(BacktestMixin):
 
         if len(trades) > 0:
 
-            trades["pnl"] = None
-            trades["equity"] = None
-            trades["amount"] = None
+            trades["pnl"] = np.nan
+            trades["equity"] = np.nan
+            trades["amount"] = np.nan
 
             equity = self.amount
             for index, trade in trades.iterrows():
-                pnl = (np.exp(trade["log_return"]) - 1) * self.leverage
+                if self.short_model == 'static':
+                    # fixed-units pnl, consistent with the static equity
+                    # recurrence (costs charged per leg on traded notional)
+                    ratio = trade["exit_price_raw"] / trade["entry_price_raw"]
+                    side = trade[SIDE]
+                    pnl = self.leverage * (
+                        side * (ratio - 1) - self.tc * (1 + ratio)
+                    ) / (1 + self.tc * side)
+                else:
+                    pnl = (np.exp(trade["log_return"]) - 1) * self.leverage
+
+                # a leveraged loss is capped at -100%: the account is wiped out
+                pnl = max(pnl, -1.0)
 
                 equity = equity * (1 + pnl)
                 amount = equity * self.leverage
@@ -335,10 +293,14 @@ class VectorizedBacktester(BacktestMixin):
                 trades.loc[no_funds_left_index[0]:, "amount"] = 0
                 trades.loc[no_funds_left_index[0] + 1:, "pnl"] = 0
 
-            trades["units"] = (trades["amount"].shift(1) / trades["entry_price"]).fillna(leveraged_amount / trades["entry_price"][0])
-            trades["profit"] = (trades["equity"] - trades["equity"].shift(1)).fillna(trades["equity"][0] - self.amount)
+            trades["units"] = (trades["amount"].shift(1) / trades["entry_price"]).fillna(
+                leveraged_amount / trades["entry_price"].iloc[0]
+            )
+            trades["profit"] = (trades["equity"] - trades["equity"].shift(1)).fillna(
+                trades["equity"].iloc[0] - self.amount
+            )
 
-        columns_to_delete = ['log_return', 'log_cum']
+        columns_to_delete = ['log_return', 'log_cum', 'entry_price_raw', 'exit_price_raw']
 
         if self.include_margin and len(trades) > 0:
             trades['maintenance_rate'], trades['maintenance_amount'] = get_maintenance_margin(
@@ -373,10 +335,10 @@ class VectorizedBacktester(BacktestMixin):
             df[MARGIN_RATIO] = 0
             return df
 
-        df['entry_price'] = None
-        df['units'] = None
-        df['maintenance_rate'] = None
-        df['maintenance_amount'] = None
+        df['entry_price'] = np.nan
+        df['units'] = np.nan
+        df['maintenance_rate'] = np.nan
+        df['maintenance_amount'] = np.nan
         df['mark_price'] = np.where(df['side'].shift(1) == 1, df[self._low_col], df[self._high_col])
 
         df_filter = (df.trades != 0) & (df.side != 0)
@@ -386,10 +348,10 @@ class VectorizedBacktester(BacktestMixin):
         df.loc[df[df_filter].index, 'maintenance_rate'] = trades_df['maintenance_rate'].values
         df.loc[df[df_filter].index, 'maintenance_amount'] = trades_df['maintenance_amount'].values
 
-        df['entry_price'].ffill(inplace=True)
-        df['units'].ffill(inplace=True)
-        df['maintenance_rate'].ffill(inplace=True)
-        df['maintenance_amount'].ffill(inplace=True)
+        df['entry_price'] = df['entry_price'].ffill()
+        df['units'] = df['units'].ffill()
+        df['maintenance_rate'] = df['maintenance_rate'].ffill()
+        df['maintenance_amount'] = df['maintenance_amount'].ffill()
 
         df[MARGIN_RATIO] = calculate_margin_ratio(
             self.leverage,
@@ -443,4 +405,6 @@ class VectorizedBacktester(BacktestMixin):
 
     @staticmethod
     def _get_nr_trades(data):
-        return int(data["trades"].sum() / 2) + 1
+        # each completed trade contributes 2 to the trades column
+        # (1 on entry, 1 on exit; a flip counts as exit + entry)
+        return int(data["trades"].sum() / 2)

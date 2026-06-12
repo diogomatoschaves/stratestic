@@ -132,7 +132,7 @@ class StrategyMixin:
         return "{}".format(self.__class__.__name__)
 
     def get_params(self, **kwargs):
-        return self.params if self.params else {}
+        return getattr(self, "params", None) or {}
 
     def _get_test_title(self):
         """
@@ -173,7 +173,7 @@ class StrategyMixin:
             if strategy_obj is not None:
                 strategy_obj.data = strategy_obj.update_data(data.copy())
             else:
-                self.data = self.update_data(self.data.copy())
+                self.data = self.update_data(data.copy())
 
     def set_parameters(self, params=None, data=None) -> None:
         """
@@ -218,6 +218,9 @@ class StrategyMixin:
         """
         Updates the input data with additional columns required for the strategy.
 
+        Subclasses should call ``super().update_data(data)`` and then compute
+        their indicators on the returned DataFrame.
+
         Parameters
         ----------
         data : pd.DataFrame
@@ -235,3 +238,22 @@ class StrategyMixin:
         self._original_data = data.copy()
 
         return data
+
+    def calculate_positions(self, data) -> pd.DataFrame:
+        """
+        Vectorized position calculation; must write 1 (long), -1 (short) or
+        0 (neutral) into the 'side' column and return the DataFrame. Used by
+        the VectorizedBacktester.
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} must implement calculate_positions(data)"
+        )
+
+    def get_signal(self, row=None):
+        """
+        Per-row signal: 1 (long), -1 (short) or 0 (neutral). Used by the
+        IterativeBacktester and for live trading.
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} must implement get_signal(row)"
+        )

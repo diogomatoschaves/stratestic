@@ -1,31 +1,48 @@
-# Your workflow name.
 name: tests
 
-# Run workflow on every push to master branch.
 on: [push]
 
 jobs:
-  tests:
+  lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v1
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.8
-      - name: Install and configure Poetry
-        uses: snok/install-poetry@v1.3.3
+          python-version: "3.12"
+      - name: Run ruff
+        run: |
+          pipx install ruff
+          ruff check .
+
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
         with:
-          version: 1.7.1
-          virtualenvs-create: false
+          python-version: ${{ matrix.python-version }}
+      - name: Install poetry
+        run: pipx install poetry
       - name: Install dependencies
         run: |
-          poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi
+          # use the matrix interpreter from setup-python, inside a venv -
+          # installing into the runner's system python fails on
+          # distro-managed packages and ignores the matrix version
+          poetry env use python
+          poetry install --no-interaction --no-ansi
       - name: Test with pytest
         run: |
-          python -m pytest --verbose --cov=stratestic --cov=tests --cov-report=xml
+          poetry run python -m pytest --verbose --cov=stratestic --cov=tests --cov-report=xml
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        if: matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage.xml

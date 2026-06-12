@@ -4,7 +4,7 @@ import numpy as np
 
 from stratestic.backtesting._mixin import BacktestMixin
 from stratestic.backtesting.helpers import Trade
-from stratestic.backtesting.helpers.evaluation import CUM_SUM_STRATEGY, CUM_SUM_STRATEGY_TC, BUY_AND_HOLD, \
+from stratestic.backtesting.helpers.evaluation import CUM_SUM_STRATEGY_TC, BUY_AND_HOLD, \
     STRATEGY_RETURNS_TC
 from stratestic.backtesting.helpers.evaluation._constants import MARGIN_RATIO, SIDE
 from stratestic.backtesting.helpers.margin import calculate_margin_ratio, get_maintenance_margin, calculate_liquidation_price
@@ -23,7 +23,8 @@ class IterativeBacktester(BacktestMixin, Trader):
         amount=1000,
         trading_costs=0.0,
         leverage=1,
-        margin_threshold=0.8
+        margin_threshold=0.8,
+        short_model='static'
     ):
         """
         Initializes the IterativeBacktester object.
@@ -38,12 +39,15 @@ class IterativeBacktester(BacktestMixin, Trader):
             The initial amount of currency available for trading. Default is 1000.
         trading_costs : float, optional
             The percentage of trading costs (e.g., spread, commissions). Default is 0.
-        include_margin : bool, optional
-            Flag indicating whether margin trading is included in the backtest. Default is False.
         leverage : float, optional
             The initial leverage to apply for margin trading. Default is 1.
         margin_threshold : float, optional
             The margin ratio threshold for margin call detection. Default is 0.8.
+        short_model : str, optional
+            How short positions are modeled: "static" (default, real
+            fixed-units short) or "inverse" (continuously rebalanced inverse
+            position). See BacktestMixin for details. Longs are identical
+            under both.
 
         Notes
         -----
@@ -60,7 +64,10 @@ class IterativeBacktester(BacktestMixin, Trader):
         """
 
         Trader.__init__(self, amount)
-        BacktestMixin.__init__(self, symbol, amount, trading_costs, leverage, margin_threshold)
+        BacktestMixin.__init__(
+            self, symbol, amount, trading_costs, leverage, margin_threshold,
+            short_model=short_model
+        )
 
         self.strategy = strategy
 
@@ -204,6 +211,7 @@ class IterativeBacktester(BacktestMixin, Trader):
     def _perform_iteration(self, data, print_results):
         equity = self.amount
         amount = self.amount * self.leverage
+        notional = 0.0
 
         for bar, (timestamp, row) in enumerate(data.iterrows()):
 
@@ -232,20 +240,52 @@ class IterativeBacktester(BacktestMixin, Trader):
                 new_trade = trades >= 1
                 self._calculate_margin_ratio(row, new_trade)
 
-            strategy_return = row[self._returns_col] * previous_position - trades * self.tc
+            if self.short_model == 'static':
+                # Mirror calculate_static_equity exactly: fixed units are
+                # marked to market, costs charged per leg on the notional.
+                growth = np.exp(row[self._returns_col])
+                equity = equity + previous_position * (growth - 1.0) * notional
+                notional = notional * growth
 
-            simple_return = np.exp(strategy_return) - 1
+                if equity <= 0:
+                    equity = 0.0
+                    notional = 0.0
+                elif signal != previous_position:
+                    if previous_position != 0:
+                        equity = equity - self.tc * notional
+                        notional = 0.0
 
-            pnl = simple_return * amount
+                    if equity <= 0:
+                        equity = 0.0
+                    elif signal != 0:
+                        notional = equity * self.leverage / (1.0 + self.tc * signal)
+                        equity = equity - self.tc * notional
 
-            equity = equity + pnl
+                        if equity <= 0:
+                            equity = 0.0
+                            notional = 0.0
+            else:
+                strategy_return = row[self._returns_col] * previous_position - trades * self.tc
+
+                simple_return = np.exp(strategy_return) - 1
+
+                pnl = simple_return * amount
+
+                equity = equity + pnl
+
+                # Mirror calculate_leveraged_equity exactly: equity is floored
+                # at 0 (account wiped out), and the traded notional is reset to
+                # equity * leverage on each bar where a new trade is opened
+                # (never on the very first bar), compounding otherwise.
+                if equity <= 0:
+                    equity = 0.0
+                    amount = 0.0
+                elif bar != 0 and trades >= 1 and signal != 0:
+                    amount = equity * self.leverage
+                else:
+                    amount = amount + pnl
 
             self.equity.append(equity)
-
-            if trades >= 1 and previous_position != 0:
-                amount = equity * self.leverage
-            else:
-                amount = amount + pnl
 
     def _iterative_backtest(self, data, print_results=True):
         """
@@ -374,9 +414,15 @@ class IterativeBacktester(BacktestMixin, Trader):
             units = amount / price_tc
 
         if amount is None:
-            # The formula below comes from the computation: amount = 2 * prev_amount - new_amount
-            # new_amount = prev_price / price * prev_amount, prev_amount = units * prev_price
-            amount = self.trades[-1].entry_price * units * (2 - self.trades[-1].entry_price / price_tc)
+            if self.short_model == 'static':
+                # real cash flow: buying back the units at the current price
+                amount = units * price_tc
+            else:
+                # Inverse-model short buy-back: reproduces pnl = entry/exit - 1
+                # (a continuously-rebalanced inverse position) instead of the
+                # real cash flow. Comes from: amount = 2 * prev_amount - new_amount,
+                # new_amount = prev_price / price * prev_amount, prev_amount = units * prev_price
+                amount = self.trades[-1].entry_price * units * (2 - self.trades[-1].entry_price / price_tc)
 
         self.current_balance -= amount
         self.units += units
@@ -546,7 +592,9 @@ class IterativeBacktester(BacktestMixin, Trader):
             trades[-1].equity = equity
             trades[-1].amount = amount
 
-            trades[-1].calculate_profit(trades[-2].equity if len(trades) >= 2 else self.amount)
-            trades[-1].calculate_pnl_pct(self.leverage)
+            prev_equity = trades[-2].equity if len(trades) >= 2 else self.amount
+
+            trades[-1].calculate_profit(prev_equity)
+            trades[-1].calculate_pnl_pct(self.leverage, short_model=self.short_model, prev_equity=prev_equity)
 
             self.nr_trades += 1

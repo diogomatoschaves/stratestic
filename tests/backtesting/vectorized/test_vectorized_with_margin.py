@@ -57,8 +57,6 @@ class TestVectorizedBacktesterMargin:
 
         vect.run()
 
-        print(vect.processed_data.reset_index().to_dict(orient="records"))
-
         if len(vect.trades) > 0:
             assert (
                 round(vect.trades[0].profit / vect.trades[0].pnl) == amount

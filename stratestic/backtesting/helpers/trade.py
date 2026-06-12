@@ -46,5 +46,10 @@ class Trade:
 
         self.profit = self.equity - prev_equity
 
-    def calculate_pnl_pct(self, leverage):
-        self.pnl = (np.exp(np.log(self.exit_price / self.entry_price) * self.side) - 1) * leverage
+    def calculate_pnl_pct(self, leverage, short_model="static", prev_equity=None):
+        # a leveraged loss is capped at -100%: the account is wiped out
+        if short_model == "static" and prev_equity:
+            # real cash accounting: the pnl is the profit on the pre-trade equity
+            self.pnl = max(self.profit / prev_equity, -1.0)
+        else:
+            self.pnl = max((np.exp(np.log(self.exit_price / self.entry_price) * self.side) - 1) * leverage, -1.0)

@@ -1,3 +1,4 @@
+import re
 from typing import Literal
 
 import numpy as np
@@ -291,7 +292,9 @@ class StrategyCombiner(StrategyMixin):
             DataFrame with the calculated combined positions.
         """
 
-        position_cols = [col for col in data.columns if SIDE in col][1:]  # Excludes 'side' column
+        # the joined per-strategy columns are named side_1..side_n; matching
+        # them exactly avoids picking up user columns that contain "side"
+        position_cols = [col for col in data.columns if re.fullmatch(rf"{SIDE}_\d+", col)]
 
         if self.method == 'Majority':
 
@@ -322,7 +325,7 @@ class StrategyCombiner(StrategyMixin):
         if row is None:
             row = self.data.iloc[-1]
 
-        positions_cols = [col for col in row.index if SIDE in col][1:]
+        positions_cols = [col for col in row.index if re.fullmatch(rf"{SIDE}_\d+", col)]
 
         signal = 0
         if self.method == 'Unanimous':

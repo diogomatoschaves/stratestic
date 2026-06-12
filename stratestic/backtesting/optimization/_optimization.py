@@ -86,7 +86,7 @@ def strategy_optimizer(
             opt_params,
             runner_args,
             finish=None,
-            workers=1,
+            workers=kwargs.pop("workers", 1),
             **kwargs
         )
 
@@ -225,7 +225,8 @@ def _get_optimization_input(optimization_params, strategy):
         opt_params.append(params)
 
         multiplier = (limits[1] - limits[0])
-        optimizations_steps *= int(multiplier / step) if step is not None else multiplier
+        # np.arange(lo, hi, step) produces ceil((hi - lo) / step) points
+        optimizations_steps *= int(np.ceil(multiplier / step)) if step is not None else multiplier
 
     return opt_params, optimizations_steps
 

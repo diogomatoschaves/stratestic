@@ -4,7 +4,6 @@ import pytest
 import pandas as pd
 
 from stratestic.strategies import MachineLearning
-from stratestic.strategies.machine_learning.helpers import get_filename, estimator_params
 from stratestic.utils.exceptions import ModelNotFitted
 from tests.setup.test_data.sample_data import data
 from tests.setup.test_setup import get_fixtures
@@ -45,8 +44,6 @@ class TestStrategy:
 
         instance.__repr__()
 
-        print(instance.data.to_dict(orient='records'))
-
         pd.testing.assert_frame_equal(instance.data, fixture["out"]["expected_data"], check_exact=False)
 
     @pytest.mark.parametrize(
@@ -72,8 +69,6 @@ class TestStrategy:
         instance = strategy(**params, data=data)
 
         instance.set_parameters(new_parameters)
-
-        print(instance.data.to_dict(orient='records'))
 
         pd.testing.assert_frame_equal(
             instance.data.sort_index(axis=1),
@@ -194,14 +189,11 @@ class TestStrategy:
             nr_lags=nr_lags,
             data=data[0:10],
             trade_on_close=False,
-            models_dir=tmp_path
+            models_dir=tmp_path,
+            save_model=True,
         )
 
-        filename = get_filename(
-            ml._estimator,
-            ml._model_type,
-            estimator_params[ml._model_type][ml._estimator]
-        ) + '.pkl'
+        filename = ml.get_model_filename() + '.pkl'
 
         ml = MachineLearning(load_model=filename, models_dir=tmp_path)
 
@@ -209,4 +201,5 @@ class TestStrategy:
 
         ml = MachineLearning(load_model=filename, models_dir=tmp_path, data=data)
 
-        assert ml.X_test.shape[0] == data.shape[0] - nr_lags
+        # one row is lost to the lags and one to the shifted (next-bar) label
+        assert ml.X_test.shape[0] == data.shape[0] - nr_lags - 1

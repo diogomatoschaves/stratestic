@@ -1,9 +1,7 @@
 import logging
-import joblib
 
 import numpy as np
 from sklearn.base import is_classifier
-from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 
@@ -15,13 +13,6 @@ from stratestic.strategies.machine_learning.helpers._pipeline_custom_classes imp
     FeatureSelector,
     CustomOneHotEncoder,
 )
-
-grid_search_params_defaults = {
-    "reg__n_estimators": [250, 300, 350],
-    "reg__min_samples_split": [2, 4, 5],
-    "reg__max_features": ["sqrt", "log2", "auto"],
-    "reg__max_depth": [2, 3, 5, 6],
-}
 
 configure_logger()
 
@@ -95,8 +86,6 @@ def train_model(
         The target variable.
     model_type : str, optional
         the type of model to be trained
-    evaluation_metric : str or callable, optional
-        The metric to use for evaluating model performance. Default is None.
     test_size : float, optional
         The proportion of the dataset to include in the test split. Default is 0.2.
     polynomial_degree : int, optional
@@ -115,7 +104,7 @@ def train_model(
     y_train, y_test : pd.Series or np.ndarray
         Training and testing target variables.
     """
-    
+
     if verbose:
         logging.info("\tbuilding model...")
 
@@ -124,15 +113,17 @@ def train_model(
     model, is_clf = build_pipeline(estimator_, polynomial_degree)
 
     if is_clf:
+        # 3-class labels: 1 (up), -1 (down) and 0 for zero returns, matching
+        # the backtester's side convention (0 = stay flat)
         y = np.sign(y)
 
     X_train, X_test, y_train, y_test = train_test_split_ts(X, y, test_size=test_size)
-    
+
     if verbose:
         logging.info("\tfitting data...")
 
     model.fit(X_train, y_train)
-    
+
     if verbose:
         logging.info("\tgetting model results...")
 

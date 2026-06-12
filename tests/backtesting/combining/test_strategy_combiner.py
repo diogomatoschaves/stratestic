@@ -104,8 +104,6 @@ class TestStrategyCombiner:
 
         combiner.calculate_positions(combiner.data)
 
-        print(combiner.data.to_dict(orient="records"))
-
         assert combiner.data["side"].to_list() == expected_results
 
     @pytest.mark.parametrize(
@@ -133,8 +131,6 @@ class TestStrategyCombiner:
         # Run the backtester
         backtester.run()
 
-        print(backtester.processed_data.to_dict(orient="records"))
-
         position_cols = [
             col for col in backtester.processed_data.columns if "side" in col
         ]
@@ -143,7 +139,6 @@ class TestStrategyCombiner:
 
         for i, d in enumerate(backtester.processed_data.to_dict(orient="records")):
             for key in d:
-                print(key)
                 assert d[key] == pytest.approx(
                     fixture["out"]["expected_results"][i][key], 0.2
                 )

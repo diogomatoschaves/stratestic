@@ -1,7 +1,7 @@
 class NoSuchPipeline(Exception):
     def __init__(self, *args):
         if not args:
-            self.message = f"Pipeline was not found."
+            self.message = "Pipeline was not found."
         else:
             self.message = f"Pipeline {args[0]} was not found."
 

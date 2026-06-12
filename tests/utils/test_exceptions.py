@@ -23,7 +23,7 @@ class TestExceptions:
         [
             pytest.param(
                 LeverageInvalid(),
-                f"Leverage Invalid.",
+                "Leverage Invalid.",
                 id="LeverageInvalid",
             ),
             pytest.param(
@@ -38,22 +38,22 @@ class TestExceptions:
             ),
             pytest.param(
                 OptimizationParametersInvalid(),
-                f"Optimization parameters are not valid.",
+                "Optimization parameters are not valid.",
                 id="OptimizationParametersInvalid",
             ),
             pytest.param(
                 StrategyInvalid(),
-                f"Strategy is not valid.",
+                "Strategy is not valid.",
                 id="StrategyInvalid",
             ),
             pytest.param(
                 StrategyRequired(),
-                f"A strategy must be included in the request.",
+                "A strategy must be included in the request.",
                 id="StrategyRequired",
             ),
             pytest.param(
                 SymbolInvalid(),
-                f"Symbol is not valid.",
+                "Symbol is not valid.",
                 id="SymbolInvalid",
             ),
             pytest.param(
@@ -99,7 +99,7 @@ class TestExceptions:
             ),
             pytest.param(
                 StrategyRequired(arg),
-                f"A strategy must be included in the request.",
+                "A strategy must be included in the request.",
                 id="StrategyRequired",
             ),
             pytest.param(

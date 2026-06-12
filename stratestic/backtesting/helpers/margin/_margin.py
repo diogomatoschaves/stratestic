@@ -26,13 +26,13 @@ def get_maintenance_margin(symbol_brackets, notional_value, exchange='binance'):
         Internal function for calculating maintenance margin for Binance exchange.
         """
 
-        values = pd.Series(notional_value)
+        values = pd.Series(notional_value).values
 
-        comparison = pd.DataFrame()
-        for i, notional_floor in enumerate(symbol_brackets['notionalFloor']):
-            comparison[i] = values >= notional_floor
-
-        indexes = comparison.idxmin(axis=1) - 1
+        # brackets are sorted by ascending notionalFloor; pick the last
+        # bracket whose floor is below (or at) each notional value
+        floors = symbol_brackets['notionalFloor'].values
+        indexes = np.searchsorted(floors, values, side='right') - 1
+        indexes = np.clip(indexes, 0, len(floors) - 1)
 
         brackets = symbol_brackets.iloc[indexes, :]
 
@@ -98,7 +98,8 @@ def calculate_margin_ratio(
         try:
             return maintenance_margin / margin_balance
         except ZeroDivisionError:
-            return np.Inf
+            # scalar inputs (iterative engine) raise; array inputs yield inf
+            return np.inf
 
     if exchange == 'binance':
         return calculate_margin_ratio_binance()

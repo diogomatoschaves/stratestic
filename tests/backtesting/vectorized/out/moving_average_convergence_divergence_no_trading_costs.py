@@ -1,16 +1,14 @@
+import numpy as np
 from pandas import Timestamp
 
-expected_performance = 0.997003
-expected_outperformance = -0.005152
+expected_performance = 0.996996
+expected_outperformance = -0.005159
 
-expected_optimization_results = (
-    {"window_slow": 4.0, "window_fast": 3.0, "window_sign": 3.0},
-    6.465985017210029,
-)
+expected_optimization_results = ({'window_slow': 4.0, 'window_fast': 3.0, 'window_sign': 3.0}, 6.465985017210029)
 
 expected_results = [
     {
-        "close_time": Timestamp("2023-09-01 14:44:59.999000+0000", tz="UTC"),
+        "close_time": Timestamp('2023-09-01 14:44:59.999000+0000', tz='UTC'),
         "open": 56260.11,
         "high": 56317.43,
         "low": 56118.31,
@@ -21,7 +19,7 @@ expected_results = [
         "taker_buy_asset_volume": 178.075904,
         "taker_buy_quote_volume": 10007121.78892216,
         "returns": 0.0,
-        "macd_diff": 37.90364648896147,
+        "macd_diff": 37.90364648896585,
         "side": 1,
         "strategy_returns": 0.0,
         "strategy_returns_tc": 0.0,
@@ -31,7 +29,7 @@ expected_results = [
         "accumulated_strategy_returns": 1.0,
     },
     {
-        "close_time": Timestamp("2023-09-01 14:49:59.999000+0000", tz="UTC"),
+        "close_time": Timestamp('2023-09-01 14:49:59.999000+0000', tz='UTC'),
         "open": 56168.82,
         "high": 56269.99,
         "low": 56080.96,
@@ -42,7 +40,7 @@ expected_results = [
         "taker_buy_asset_volume": 145.064381,
         "taker_buy_quote_volume": 8146012.47892439,
         "returns": 0.0003967606653441501,
-        "macd_diff": 5.095611124768823,
+        "macd_diff": 5.0956111247714375,
         "side": 1,
         "strategy_returns": 0.0003967606653441501,
         "strategy_returns_tc": 0.0003967606653441501,
@@ -52,7 +50,7 @@ expected_results = [
         "accumulated_strategy_returns": 1.0003968393852676,
     },
     {
-        "close_time": Timestamp("2023-09-01 14:54:59.999000+0000", tz="UTC"),
+        "close_time": Timestamp('2023-09-01 14:54:59.999000+0000', tz='UTC'),
         "open": 56191.11,
         "high": 56200.0,
         "low": 56107.98,
@@ -63,7 +61,7 @@ expected_results = [
         "taker_buy_asset_volume": 134.1124,
         "taker_buy_quote_volume": 7529521.30623853,
         "returns": -0.0008209293091875578,
-        "macd_diff": -22.87327744557183,
+        "macd_diff": -22.873277445570267,
         "side": -1,
         "strategy_returns": -0.0008209293091875578,
         "strategy_returns_tc": -0.0008209293091875578,
@@ -73,7 +71,7 @@ expected_results = [
         "accumulated_strategy_returns": 0.9995759213029578,
     },
     {
-        "close_time": Timestamp("2023-09-01 14:59:59.999000+0000", tz="UTC"),
+        "close_time": Timestamp('2023-09-01 14:59:59.999000+0000', tz='UTC'),
         "open": 56145.0,
         "high": 56211.7,
         "low": 56106.97,
@@ -84,17 +82,17 @@ expected_results = [
         "taker_buy_asset_volume": 168.231118,
         "taker_buy_quote_volume": 9447425.0774598,
         "returns": 0.0006607487960858385,
-        "macd_diff": -28.20911405336851,
+        "macd_diff": -28.20911405336757,
         "side": -1,
-        "strategy_returns": -0.0006607487960858446,
-        "strategy_returns_tc": -0.0006607487960858446,
-        "equity": 998.9156708702212,
+        "strategy_returns": -0.0006611856737396563,
+        "strategy_returns_tc": -0.0006611856737396563,
+        "equity": 998.9152344663819,
         "accumulated_returns": 1.0002366081395337,
-        "accumulated_strategy_returns_tc": 0.9989156708702213,
-        "accumulated_strategy_returns": 0.9989156708702213,
+        "accumulated_strategy_returns_tc": 0.998915234466382,
+        "accumulated_strategy_returns": 0.998915234466382,
     },
     {
-        "close_time": Timestamp("2023-09-01 15:04:59.999000+0000", tz="UTC"),
+        "close_time": Timestamp('2023-09-01 15:04:59.999000+0000', tz='UTC'),
         "open": 56182.12,
         "high": 56299.78,
         "low": 56172.09,
@@ -105,13 +103,13 @@ expected_results = [
         "taker_buy_asset_volume": 139.83665,
         "taker_buy_quote_volume": 7864202.02549528,
         "returns": 0.0019165664875115606,
-        "macd_diff": -16.167489029180103,
+        "macd_diff": -16.167489029183898,
         "side": 0,
-        "strategy_returns": -0.0019165664875115203,
-        "strategy_returns_tc": -0.0019165664875115203,
-        "equity": 997.0030160221412,
+        "strategy_returns": -0.0019227893318281065,
+        "strategy_returns_tc": -0.0019227893318281065,
+        "equity": 996.9963762813603,
         "accumulated_returns": 1.002155466324555,
-        "accumulated_strategy_returns_tc": 0.9970030160221413,
-        "accumulated_strategy_returns": 0.9970030160221413,
+        "accumulated_strategy_returns_tc": 0.9969963762813603,
+        "accumulated_strategy_returns": 0.9969963762813603,
     },
 ]

@@ -1,7 +1,7 @@
 class StrategyInvalid(Exception):
     def __init__(self, *args):
         if not args:
-            self.message = f"Strategy is not valid."
+            self.message = "Strategy is not valid."
         else:
             self.message = f"{args[0]} is not a valid strategy."
 

@@ -3,4 +3,6 @@ from stratestic.strategies.moving_average import MovingAverageCrossover
 strategy = MovingAverageCrossover
 params = {"sma_s": 4, "sma_l": 7}
 trading_costs = 0.3
-optimization_params = [{"sma_s": (1, 10), "sma_l": (1, 10)}, "Calmar Ratio"]
+# Calmar relies on annualized return, which is degenerate on a 1-hour
+# dataset (exponent ~8766), so a trade-based metric is used instead.
+optimization_params = [{"sma_s": (1, 10), "sma_l": (1, 10)}, "Profit Factor"]

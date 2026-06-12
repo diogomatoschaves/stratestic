@@ -88,4 +88,11 @@ class CustomOneHotEncoder(OneHotEncoder):
 
         transformed_data = super(CustomOneHotEncoder, self).transform(X, **transform_params).toarray()
 
-        return pd.DataFrame(data=transformed_data, columns=self.columns)
+        # use the expanded one-hot column names (one per category) and keep the
+        # input index - reusing the input column names broke for any feature
+        # with more than two categories and silently misaligned the time index
+        return pd.DataFrame(
+            data=transformed_data,
+            columns=self.get_feature_names_out(self.columns),
+            index=X.index,
+        )

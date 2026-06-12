@@ -60,8 +60,10 @@ class MovingAverageConvergenceDivergence(MACD, StrategyMixin):
         **kwargs
             Keyword arguments to pass to parent class
         """
+        # _close and params must be set before StrategyMixin.__init__, which
+        # already runs update_data (assigning _close after it would clobber
+        # the computed state)
         MACD.__init__(self, pd.Series(dtype='float64'), window_slow, window_fast, window_sign)
-        StrategyMixin.__init__(self, data, **kwargs)
 
         self._close = pd.Series(dtype='float64')
 
@@ -70,6 +72,8 @@ class MovingAverageConvergenceDivergence(MACD, StrategyMixin):
             window_fast=lambda x: int(x),
             window_sign=lambda x: int(x)
         )
+
+        StrategyMixin.__init__(self, data, **kwargs)
 
     def __repr__(self) -> str:
         """
@@ -84,7 +88,7 @@ class MovingAverageConvergenceDivergence(MACD, StrategyMixin):
             self.__class__.__name__, self.symbol, self._window_fast, self._window_slow, self._window_sign
         )
 
-    def update_data(self, data) -> None:
+    def update_data(self, data) -> pd.DataFrame:
         """
         Updates the input data with additional columns required for the strategy.
 
@@ -121,7 +125,7 @@ class MovingAverageConvergenceDivergence(MACD, StrategyMixin):
         pd.DataFrame
             Dataframe containing side column.
         """
-        data[SIDE] = np.where(data["macd_diff"] > 0, 1, -1)
+        data[SIDE] = np.where(data["macd_diff"] > 0, 1, np.where(data["macd_diff"] < 0, -1, 0))
 
         return data
 
@@ -146,3 +150,5 @@ class MovingAverageConvergenceDivergence(MACD, StrategyMixin):
             return 1
         elif row["macd_diff"] < 0:
             return -1
+        else:
+            return 0

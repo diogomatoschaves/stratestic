@@ -2,9 +2,9 @@ from collections import OrderedDict
 from typing import Literal
 
 import numpy as np
-from ta.trend import ema_indicator, sma_indicator
 
 from stratestic.backtesting.helpers.evaluation import SIDE
+from stratestic.strategies._helpers import get_moving_average
 from stratestic.strategies._mixin import StrategyMixin
 
 
@@ -101,15 +101,8 @@ class MovingAverageCrossover(StrategyMixin):
         """
         data = super().update_data(data)
 
-        if self._moving_av == 'sma':
-            data["SMA_S"] = sma_indicator(close=data[self._close_col], window=self._sma_s)
-            data["SMA_L"] = sma_indicator(close=data[self._close_col], window=self._sma_l)
-
-        elif self._moving_av == 'ema':
-            data["SMA_S"] = ema_indicator(close=data[self._close_col], window=self._sma_s)
-            data["SMA_L"] = ema_indicator(close=data[self._close_col], window=self._sma_l)
-        else:
-            raise ('Method not supported')
+        data["SMA_S"] = get_moving_average(data[self._close_col], self._moving_av, self._sma_s)
+        data["SMA_L"] = get_moving_average(data[self._close_col], self._moving_av, self._sma_l)
 
         return data
 
